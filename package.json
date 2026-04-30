@@ -1,0 +1,41 @@
+{
+  "name": "production-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-tenant SaaS production application",
+  "workspaces": [
+    "client",
+    "server",
+    "shared",
+    "workers"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "build": "npm run build --workspaces",
+    "build:server": "npm run build --workspace=server",
+    "build:client": "npm run build --workspace=client",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:migrate": "tsx server/v2/migrationRunner.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "tenant:create": "tsx scripts/createTenant.ts",
+    "lint": "tsc --noEmit",
+    "clean": "rimraf client/dist server/dist"
+  },
+  "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
+    "concurrently": "^8.2.2",
+    "rimraf": "^5.0.5",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.3.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "crypto-js": "^4.2.0"
+  }
+}

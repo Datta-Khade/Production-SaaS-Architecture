@@ -1,0 +1,96 @@
+/**
+ * Cache Utilities — Tenant-scoped Redis caching
+ * 
+ * ALL cache keys MUST use tenantCacheKey() to prevent cross-tenant data leakage.
+ * Never cache: file data, PII without encryption.
+ */
+import { getRedis } from './redis.js';
+import { logger } from './logger.js';
+
+/**
+ * Generate a tenant-scoped cache key.
+ * Format: "tenant:{tenantId}:{resource}:{identifier}"
+ */
+export const tenantCacheKey = (tenantId: string, resource: string, identifier?: string): string => {
+  const parts = ['tenant', tenantId, resource];
+  if (identifier) {
+    parts.push(identifier);
+  }
+  return parts.join(':');
+};
+
+/**
+ * TTL Guidelines (seconds):
+ * - User sessions:   900  (15 min — matches JWT expiry)
+ * - Tenant metadata: 300  (5 min — tenantConnectionManager)
+ * - List queries:    60   (invalidate on mutation)
+ * - Config/settings: 600  (10 min — rarely changes)
+ */
+export const CACHE_TTL = {
+  SESSION:  900,
+  TENANT:   300,
+  LIST:     60,
+  CONFIG:   600,
+} as const;
+
+/**
+ * Get a cached value. Returns null on cache miss or Redis failure.
+ */
+export const cacheGet = async <T>(key: string): Promise<T | null> => {
+  try {
+    const redis = getRedis();
+    const raw = await redis.get(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch (err) {
+    logger.warn({ key, error: (err as Error).message }, 'Cache GET failed — proceeding without cache');
+    return null;
+  }
+};
+
+/**
+ * Set a cached value with TTL (in seconds).
+ */
+export const cacheSet = async (key: string, value: unknown, ttlSeconds: number): Promise<void> => {
+  try {
+    const redis = getRedis();
+    await redis.set(key, JSON.stringify(value), 'EX', ttlSeconds);
+  } catch (err) {
+    logger.warn({ key, error: (err as Error).message }, 'Cache SET failed — continuing without cache');
+  }
+};
+
+/**
+ * Invalidate one or more cache keys.
+ */
+export const cacheInvalidate = async (...keys: string[]): Promise<void> => {
+  try {
+    const redis = getRedis();
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+  } catch (err) {
+    logger.warn({ keys, error: (err as Error).message }, 'Cache INVALIDATE failed');
+  }
+};
+
+/**
+ * Invalidate all cache keys for a tenant + resource pattern.
+ * Uses SCAN to avoid KEYS command (never use KEYS in production).
+ */
+export const cacheInvalidatePattern = async (tenantId: string, resource: string): Promise<void> => {
+  try {
+    const redis = getRedis();
+    const pattern = tenantCacheKey(tenantId, resource, '*');
+    let cursor = '0';
+    do {
+      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+    } while (cursor !== '0');
+  } catch (err) {
+    logger.warn({ tenantId, resource, error: (err as Error).message }, 'Cache pattern INVALIDATE failed');
+  }
+};

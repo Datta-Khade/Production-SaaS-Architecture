@@ -1,0 +1,96 @@
+# infra/docker-compose.yml
+# Development environment — all services
+
+services:
+  # Backend API server
+  app:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.server
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: ../.env.development
+    environment:
+      - MASTER_DATABASE_URL=postgresql://dev:devpassword@postgres:5432/production_master
+      - DATABASE_URL=postgresql://dev:devpassword@postgres:5432/tenant_dev
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ../server:/app/server
+      - ../shared:/app/shared
+      - ../migrations:/app/migrations
+    restart: unless-stopped
+
+  # Frontend dev server
+  client:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.client
+    ports:
+      - "5173:5173"
+    depends_on:
+      - app
+    volumes:
+      - ../client:/app/client
+      - ../shared:/app/shared
+    restart: unless-stopped
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    environment:
+      POSTGRES_DB: production_master
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: devpassword
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev -d production_master"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # PgBouncer connection pooler
+  pgbouncer:
+    image: pgbouncer/pgbouncer:latest
+    ports:
+      - "6432:6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASES_HOST: postgres
+      DATABASES_PORT: 5432
+      DATABASES_USER: dev
+      DATABASES_PASSWORD: devpassword
+      DATABASES_DBNAME: production_master
+      PGBOUNCER_POOL_MODE: transaction
+      PGBOUNCER_MAX_CLIENT_CONN: 100
+      PGBOUNCER_DEFAULT_POOL_SIZE: 20
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:

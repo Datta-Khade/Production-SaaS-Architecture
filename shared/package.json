@@ -1,0 +1,18 @@
+{
+  "name": "@production/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./v2/index.ts",
+  "types": "./v2/index.ts",
+  "exports": {
+    "./*": "./v2/*"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.29.3",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0"
+  }
+}

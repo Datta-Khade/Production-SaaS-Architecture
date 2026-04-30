@@ -1,0 +1,40 @@
+# ── Build Stage ──────────────────────────────────────────
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy workspace root
+COPY package.json package-lock.json* ./
+COPY tsconfig.base.json ./
+
+# Copy workspace packages
+COPY shared/ ./shared/
+COPY server/ ./server/
+
+# Install dependencies
+RUN npm install --workspace=server --workspace=shared
+
+# Build
+RUN npm run build --workspace=shared 2>/dev/null || true
+RUN npm run build --workspace=server
+
+# ── Production Stage ─────────────────────────────────────
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy built output
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/server/dist ./server/dist
+COPY --from=builder /app/shared ./shared
+COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/package.json ./
+
+# Non-root user for security
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -S appuser -u 1001 -G appgroup
+USER appuser
+
+EXPOSE 3000
+
+CMD ["node", "server/dist/index.js"]
