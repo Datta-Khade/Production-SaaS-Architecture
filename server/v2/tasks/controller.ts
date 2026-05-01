@@ -38,7 +38,7 @@ export const tasksController = {
       throw new ValidationError(parsed.error.errors[0]?.message || 'Invalid input');
     }
 
-    const task = await tasksService.createTask(parsed.data, {
+    const task = await tasksService.createTask(parsed.data as any, {
       user: req.user!,
       ipAddress: req.ip,
       requestId: req.headers['x-request-id'] as string,
@@ -56,7 +56,7 @@ export const tasksController = {
       throw new ValidationError(parsed.error.errors[0]?.message || 'Invalid input');
     }
 
-    const task = await tasksService.updateTask(uuid, parsed.data, {
+    const task = await tasksService.updateTask(uuid, parsed.data as any, {
       user: req.user!,
       ipAddress: req.ip,
       requestId: req.headers['x-request-id'] as string,

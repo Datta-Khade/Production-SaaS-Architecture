@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useViewport, getLayoutConfig } from '@/shared/hooks/useViewport';
-import { getAccessToken, decodeToken, logout, getTenantDomain } from '@/shared/lib/auth';
+import { useViewport, getLayoutConfig } from '../hooks/useViewport';
+import { getAccessToken, decodeToken, logout, getTenantDomain } from '../lib/auth';
 import { 
     FileText, 
     BarChart3, 
@@ -10,7 +10,7 @@ import {
     PanelLeft,
     LogOut
 } from "lucide-react";
-import logo from '@/assets/logo.svg';
+import logo from '../../assets/logo.svg';
 
 const navItems = [
     {

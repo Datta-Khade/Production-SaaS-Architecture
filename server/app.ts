@@ -50,10 +50,6 @@ export const createApp = (): express.Application => {
   // ─── Routes ────────────────────────────────────────────────
   app.use(routes);
 
-  // ─── 404 Handler ───────────────────────────────────────────
-  app.use((_req, _res, next) => {
-    next(new NotFoundError('Route not found'));
-  });
 
   // ─── Global Error Handler (MUST be last) ───────────────────
   app.use(globalErrorHandler);

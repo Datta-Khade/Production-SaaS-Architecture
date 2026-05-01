@@ -10,6 +10,8 @@
  * 
  * Graceful shutdown on SIGTERM/SIGINT.
  */
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { env } from './env.js';
 import { logger } from './lib/logger.js';
 
@@ -28,6 +30,7 @@ import { getRedis, closeRedis } from './lib/redis.js';
 import { closeAllPools } from './v2/db.js';
 import { runMigrations } from './v2/migrationRunner.js';
 import { createApp } from './app.js';
+import { setupVite, serveStatic } from './vite.js';
 
 const start = async (): Promise<void> => {
   logger.info({ env: env.NODE_ENV, port: env.PORT }, '🚀 Starting production-app server...');
@@ -42,17 +45,19 @@ const start = async (): Promise<void> => {
   }
 
   // 2. Run pending migrations on master DB
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
   try {
-    await runMigrations(env.MASTER_DATABASE_URL);
+    await runMigrations(env.MASTER_DATABASE_URL, path.resolve(__dirname, '../migrations', 'master'));
     logger.info('✅ Master DB migrations complete');
   } catch (err) {
     logger.error({ error: (err as Error).message }, '❌ Migration failed — server will not start');
     process.exit(1);
   }
 
-  // 3. Create and start Express app
+  // 3. Create Express app
   const app = createApp();
   
+  // 4. Create HTTP server for Vite/WS support
   const server = app.listen(env.PORT, () => {
     logger.info({
       port: env.PORT,
@@ -61,6 +66,15 @@ const start = async (): Promise<void> => {
       authBypass: env.AUTH_BYPASS,
     }, `✅ Server running on port ${env.PORT}`);
   });
+
+  // 5. Setup Frontend (Dev Middleware or Static Serving)
+  if (env.NODE_ENV === 'development') {
+    await setupVite(app, server);
+    logger.info('✨ Vite dev middleware enabled');
+  } else {
+    serveStatic(app);
+    logger.info('📁 Serving static frontend from dist/public');
+  }
 
   // ─── Graceful Shutdown ──────────────────────────────────────
   const shutdown = async (signal: string): Promise<void> => {
