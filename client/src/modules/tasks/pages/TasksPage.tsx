@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '../api';
 import type { Task } from '@shared/v2/schema/tasks';
+import { Button } from '@/shared/components/ui/button';
+import { Input } from '@/shared/components/ui/input';
+import { Label } from '@/shared/components/ui/label';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/shared/components/ui/table';
+import { Plus, Pencil, Trash2, X, CheckCircle2, Clock, PlayCircle } from 'lucide-react';
 
 export const TasksPage: React.FC = () => {
   const [page, setPage] = useState(1);
@@ -19,6 +31,7 @@ export const TasksPage: React.FC = () => {
       description: task.description || '',
       status: task.status,
     });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCancel = () => {
@@ -42,134 +55,213 @@ export const TasksPage: React.FC = () => {
   };
 
   if (error) {
-    return <div className="p-6 text-red-600">Failed to load tasks: {(error as Error).message}</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center p-8 bg-red-50 rounded-xl border border-red-100 max-w-md">
+          <p className="text-red-600 font-medium">Failed to load tasks</p>
+          <p className="text-red-500 text-sm mt-1">{(error as Error).message}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Tasks</h1>
-        <p className="text-sm text-neutral-500">Standard CRUD module reference implementation</p>
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Tasks</h1>
+          <p className="text-gray-500 mt-1">Manage your team's workflow and priorities</p>
+        </div>
       </div>
 
-      {/* Task Form */}
-      <form onSubmit={handleSubmit} className="card p-4 space-y-4">
-        <h2 className="text-lg font-semibold">{isEditing ? 'Edit Task' : 'New Task'}</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="label">Title</label>
-            <input
-              type="text"
-              required
-              className="input"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+      {/* Task Form Section */}
+      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            {isEditing ? <Pencil size={18} className="text-[#16569e]" /> : <Plus size={18} className="text-[#16569e]" />}
+            {isEditing ? 'Edit Task' : 'Create New Task'}
+          </h2>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                required
+                placeholder="What needs to be done?"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <select
+                id="status"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              >
+                <option value="todo">To Do</option>
+                <option value="in_progress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <textarea
+              id="description"
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="Add more details about this task..."
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
-          <div>
-            <label className="label">Status</label>
-            <select
-              className="input"
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+          <div className="flex justify-end gap-3 pt-2">
+            {isEditing && (
+              <Button type="button" variant="outline" onClick={handleCancel} className="gap-2">
+                <X size={16} /> Cancel
+              </Button>
+            )}
+            <Button 
+              type="submit" 
+              className="bg-[#16569e] hover:bg-[#1e5fa8] text-white gap-2 min-w-[140px]" 
+              disabled={createTask.isPending || updateTask.isPending}
             >
-              <option value="todo">To Do</option>
-              <option value="in_progress">In Progress</option>
-              <option value="done">Done</option>
-            </select>
+              {isEditing ? <CheckCircle2 size={16} /> : <Plus size={16} />}
+              {isEditing ? 'Update Task' : 'Create Task'}
+            </Button>
           </div>
-        </div>
-        <div>
-          <label className="label">Description</label>
-          <textarea
-            className="input"
-            rows={2}
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          />
-        </div>
-        <div className="flex gap-2">
-          <button type="submit" className="btn-primary" disabled={createTask.isPending || updateTask.isPending}>
-            {isEditing ? 'Update Task' : 'Create Task'}
-          </button>
-          {isEditing && (
-            <button type="button" className="btn-secondary" onClick={handleCancel}>
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
+        </form>
+      </section>
 
-      {/* Task List */}
-      <div className="card divide-y">
-        {isLoading ? (
-          <div className="p-8 text-center text-neutral-500">Loading tasks...</div>
-        ) : data?.data.length === 0 ? (
-          <div className="p-8 text-center text-neutral-500">No tasks found.</div>
-        ) : (
-          data?.data.map((task) => (
-            <div key={task.uuid} className="p-4 flex items-start justify-between gap-4">
-              <div>
-                <h3 className="font-medium text-neutral-900">{task.title}</h3>
-                {task.description && <p className="text-sm text-neutral-500 mt-1">{task.description}</p>}
-                <div className="flex items-center gap-2 mt-2">
-                  <span className={`px-2 py-0.5 text-xs rounded-full ${
-                    task.status === 'done' ? 'bg-green-100 text-green-700' :
-                    task.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                    'bg-neutral-100 text-neutral-700'
-                  }`}>
-                    {task.status.replace('_', ' ').toUpperCase()}
-                  </span>
-                  <span className="text-xs text-neutral-400">
-                    Created: {new Date(task.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleEdit(task)}
-                  className="p-2 text-neutral-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
-                  aria-label="Edit task"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(task.uuid)}
-                  className="p-2 text-neutral-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  aria-label="Delete task"
-                >
-                  Delete
-                </button>
-              </div>
+      {/* Task List Section */}
+      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-lg font-semibold text-gray-900">Task Overview</h2>
+        </div>
+
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50/30">
+                <TableHead className="w-[40%]">Task Details</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created At</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-32 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#16569e]"></div>
+                      <span>Loading tasks...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : data?.data.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-32 text-center text-gray-500">
+                    No tasks found. Create one to get started!
+                  </TableCell>
+                </TableRow>
+              ) : (
+                data?.data.map((task) => (
+                  <TableRow key={task.uuid} className="hover:bg-gray-50/50 transition-colors">
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="font-semibold text-gray-900">{task.title}</div>
+                        {task.description && (
+                          <div className="text-xs text-gray-500 line-clamp-1">{task.description}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {task.status === 'done' ? (
+                          <CheckCircle2 size={14} className="text-green-500" />
+                        ) : task.status === 'in_progress' ? (
+                          <PlayCircle size={14} className="text-blue-500" />
+                        ) : (
+                          <Clock size={14} className="text-gray-400" />
+                        )}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          task.status === 'done' ? 'bg-green-50 text-green-700' :
+                          task.status === 'in_progress' ? 'bg-blue-50 text-blue-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {task.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-500 font-['Roboto',Helvetica]">
+                      {new Date(task.createdAt).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(task)}
+                          className="h-8 w-8 text-gray-400 hover:text-[#16569e] hover:bg-[#16569e]/5"
+                        >
+                          <Pencil size={14} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(task.uuid)}
+                          className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination Section */}
+        {data?.meta && data.meta.pages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/30">
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">
+              Page {data.meta.page} of {data.meta.pages} <span className="mx-1">•</span> {data.meta.total} total tasks
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="h-8 text-xs"
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(data.meta.pages, p + 1))}
+                disabled={page === data.meta.pages}
+                className="h-8 text-xs"
+              >
+                Next
+              </Button>
             </div>
-          ))
-        )}
-      </div>
-
-      {/* Pagination */}
-      {data?.meta && data.meta.pages > 1 && (
-        <div className="flex items-center justify-between px-4">
-          <p className="text-sm text-neutral-500">
-            Showing page {data.meta.page} of {data.meta.pages} ({data.meta.total} total)
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="btn-secondary px-3 py-1 text-sm"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setPage((p) => Math.min(data.meta.pages, p + 1))}
-              disabled={page === data.meta.pages}
-              className="btn-secondary px-3 py-1 text-sm"
-            >
-              Next
-            </button>
           </div>
-        </div>
-      )}
+        )}
+      </section>
     </div>
   );
 };

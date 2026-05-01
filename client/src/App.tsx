@@ -14,20 +14,31 @@ import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { PageSkeleton } from './shared/components/PageSkeleton';
 import { AppLayout } from './shared/layouts/AppLayout';
 
-// Lazy-loaded pages
+import { Toaster } from './shared/components/ui/toaster';
+
 const LoginPage = lazy(() => import('./modules/auth/pages/LoginPage'));
 const DashboardPage = lazy(() => import('./modules/dashboard/pages/DashboardPage'));
 const TasksPage = lazy(() => import('./modules/tasks/pages/TasksPage'));
+const UITestPage = lazy(() => import('./modules/dev/UITestPage'));
 
 const App: React.FC = () => {
   return (
-    <Routes>
+    <>
+      <Routes>
       {/* Public routes */}
       <Route
         path="/login"
         element={
           <Suspense fallback={<PageSkeleton />}>
             <LoginPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/dev/ui-test"
+        element={
+          <Suspense fallback={<PageSkeleton />}>
+            <UITestPage />
           </Suspense>
         }
       />
@@ -79,7 +90,9 @@ const App: React.FC = () => {
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+      </Routes>
+      <Toaster />
+    </>
   );
 };
 

@@ -1,181 +1,235 @@
+/* AG Grid base styles - required for legacy theming */
+@import 'ag-grid-community/styles/ag-grid.css';
+@import 'ag-grid-community/styles/ag-theme-alpine.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================================
-   Design System — CSS Custom Properties
-   ============================================================ */
-
-:root {
-  /* Colors */
-  --color-bg: #ffffff;
-  --color-bg-secondary: #f5f5f5;
-  --color-text: #171717;
-  --color-text-secondary: #525252;
-  --color-border: #e5e5e5;
-  --color-primary: #3b82f6;
-  --color-primary-hover: #2563eb;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-
-  /* Typography */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-
-  /* Spacing */
-  --sidebar-width: 260px;
-  --topbar-height: 64px;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-
-  /* Transitions */
-  --transition-fast: 150ms ease;
-  --transition-base: 200ms ease;
-  --transition-slow: 300ms ease;
+/* AG Grid custom styling to match original table design */
+.ag-theme-alpine .ag-header {
+  background-color: #52baf3 !important;
 }
 
-/* Dark mode */
-.dark {
-  --color-bg: #0a0a0a;
-  --color-bg-secondary: #171717;
-  --color-text: #fafafa;
-  --color-text-secondary: #a3a3a3;
-  --color-border: #262626;
+.ag-theme-alpine .ag-header-cell {
+  background-color: #52baf3 !important;
+  color: white !important;
+  font-size: 12px !important;
+  font-weight: normal !important;
+  border-right: none !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
 }
 
-/* ============================================================
-   Base Styles
-   ============================================================ */
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+.ag-theme-alpine .ag-header-cell-text {
+  color: white !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  text-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
 }
 
-html {
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Reduce spacing between header text and icons */
+.ag-theme-alpine .ag-header-cell-label {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  gap: 2px !important;
 }
 
-body {
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  min-height: 100vh;
+/* Compact header icons */
+.ag-theme-alpine .ag-header-icon {
+  margin-left: 2px !important;
+  margin-right: 0 !important;
+  gap: 2px !important;
 }
 
-/* ============================================================
-   Utility Classes
-   ============================================================ */
+/* Filter icons styling */
+.ag-theme-alpine .ag-header-icon {
+  color: white !important;
+}
 
-@layer components {
-  /* Card component */
-  .card {
-    @apply bg-white rounded-lg border border-neutral-200 shadow-sm;
+.ag-theme-alpine .ag-icon {
+  color: white !important;
+}
+
+.ag-theme-alpine .ag-header-cell .ag-icon {
+  color: white !important;
+}
+
+.ag-theme-alpine .ag-header-cell .ag-icon-filter {
+  color: white !important;
+}
+
+.ag-theme-alpine .ag-header-cell .ag-icon-menu {
+  color: white !important;
+}
+
+/* Header tooltip styling - white background for better readability */
+.ag-theme-alpine .ag-tooltip {
+  background-color: white !important;
+  color: #1f2937 !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 4px !important;
+  padding: 6px 10px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  font-size: 13px !important;
+}
+
+/* Column group headers (first header row) styling */
+.ag-theme-alpine .ag-header-group-cell {
+  background-color: #52baf3 !important;
+  color: white !important;
+  font-size: 12px !important;
+  font-weight: normal !important;
+  border-right: none !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  padding: 0 4px !important;
+  
+  /* Ensure vertical centering */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+}
+
+.ag-theme-alpine .ag-header-group-cell-text {
+  color: white !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Target AG Grid's inner label elements for proper centering */
+.ag-theme-alpine .ag-header-group-cell .ag-header-group-cell-label {
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+/* AG Grid theme variables for consistent heights */
+.ag-theme-alpine {
+  --ag-header-group-cell-height: 30px;
+  --ag-header-height: 40px;
+  --ag-floating-filters-height: 35px;
+}
+
+.ag-theme-alpine .ag-row {
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.ag-theme-alpine .ag-row:hover {
+  background-color: #f9fafb !important;
+}
+
+/* Remove cell right borders only */
+.ag-theme-alpine .ag-cell {
+  border-right: none !important;
+}
+
+/* Remove grid borders */
+.ag-theme-alpine .ag-root-wrapper {
+  border: none !important;
+}
+
+.ag-theme-alpine .ag-cell {
+  border-right: none !important;
+  padding: 8px 16px !important;
+}
+
+.ag-theme-alpine .ag-row-even {
+  background-color: white !important;
+}
+
+.ag-theme-alpine .ag-row-odd {
+  background-color: white !important;
+}
+
+.ag-theme-alpine {
+  border-radius: 8px !important;
+}
+
+.ag-theme-alpine .ag-root-wrapper {
+  border-radius: 8px !important;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 210 40% 98%;
+
+    --ring: 215 20.2% 65.1%;
+
+    --radius: 0.5rem;
   }
 
-  .dark .card {
-    @apply bg-neutral-900 border-neutral-800;
-  }
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
 
-  /* Button variants */
-  .btn-primary {
-    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg
-           hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
-           disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
-  }
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
 
-  .btn-secondary {
-    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-neutral-700 bg-white border border-neutral-300 rounded-lg
-           hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
-           disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
-  }
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
 
-  .btn-danger {
-    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg
-           hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2
-           disabled:opacity-50 disabled:cursor-not-allowed transition-colors;
-  }
+    --popover: 224 71% 4%;
+    --popover-foreground: 215 20.2% 65.1%;
 
-  /* Input styles */
-  .input {
-    @apply w-full px-3 py-2 text-sm border border-neutral-300 rounded-lg bg-white
-           placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-           disabled:bg-neutral-100 disabled:cursor-not-allowed transition-colors;
-  }
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
 
-  .dark .input {
-    @apply bg-neutral-900 border-neutral-700 text-neutral-100 placeholder-neutral-500;
-  }
+    --card: 224 71% 4%;
+    --card-foreground: 213 31% 91%;
 
-  /* Label */
-  .label {
-    @apply block text-sm font-medium text-neutral-700 mb-1;
-  }
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 1.2%;
 
-  .dark .label {
-    @apply text-neutral-300;
-  }
+    --secondary: 222.2 47.4% 11.2%;
+    --secondary-foreground: 210 40% 98%;
 
-  /* Error text */
-  .error-text {
-    @apply text-sm text-red-500 mt-1;
-  }
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
 
-  /* Badge */
-  .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-  }
+    --ring: 216 34% 17%;
 
-  .badge-success {
-    @apply badge bg-green-100 text-green-800;
-  }
-
-  .badge-warning {
-    @apply badge bg-yellow-100 text-yellow-800;
-  }
-
-  .badge-danger {
-    @apply badge bg-red-100 text-red-800;
+    --radius: 0.5rem;
   }
 }
 
-/* ============================================================
-   Scrollbar (custom for webkit)
-   ============================================================ */
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-secondary);
-}
-
-/* ============================================================
-   Animations
-   ============================================================ */
-
-@keyframes skeleton-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.animate-skeleton {
-  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
 }
