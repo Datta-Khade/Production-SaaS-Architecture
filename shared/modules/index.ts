@@ -3,7 +3,7 @@
  *
  * Everything exported from here is available to ALL packages via:
  *   import { ... } from '@production/shared'   (server/workers)
- *   import { ... } from '@shared/v2/...'       (client via path alias)
+ *   import { ... } from '@shared/modules/...'       (client via path alias)
  */
 
 // Schemas
@@ -19,3 +19,4 @@ export * from './errors/index.js';
 
 // Utilities
 export * from './lib/encryption.js';
+

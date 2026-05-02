@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '../api';
-import type { Task } from '@shared/v2/schema/tasks';
+import type { Task } from '@shared/modules/schema/tasks';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
@@ -267,3 +267,4 @@ export const TasksPage: React.FC = () => {
 };
 
 export default TasksPage;
+

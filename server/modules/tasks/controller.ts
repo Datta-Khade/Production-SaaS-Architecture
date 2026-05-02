@@ -9,8 +9,8 @@ import {
   uuidSchema,
   buildResponse,
   buildPaginatedResponse,
-} from '../../../shared/v2/validators/common.js';
-import { ValidationError } from '../../../shared/v2/errors/index.js';
+} from '../../../shared/modules/validators/common.js';
+import { ValidationError } from '../../../shared/modules/errors/index.js';
 
 const taskInputSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
@@ -77,3 +77,4 @@ export const tasksController = {
     res.json(buildResponse(null, 'Task deleted successfully'));
   },
 };
+

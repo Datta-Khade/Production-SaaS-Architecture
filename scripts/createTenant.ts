@@ -13,7 +13,7 @@ import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
-import { runMigrations } from '../server/v2/migrationRunner.js';
+import { runMigrations } from '../server/modules/migrationRunner.js';
 
 dotenv.config({ path: '.env.development' });
 
@@ -102,3 +102,4 @@ async function createTenant(): Promise<void> {
 }
 
 createTenant();
+

@@ -11,7 +11,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../env.js';
-import { UnauthorizedError, ForbiddenError } from '../../shared/v2/errors/index.js';
+import { UnauthorizedError, ForbiddenError } from '../../shared/modules/errors/index.js';
 
 // Extend Express Request with user context
 declare global {
@@ -106,3 +106,4 @@ export const requireRole = (minimumRole: UserRole) => {
     next();
   };
 };
+

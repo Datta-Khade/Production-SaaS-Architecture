@@ -8,7 +8,7 @@
  * - All errors are logged with full context
  */
 import { Request, Response, NextFunction } from 'express';
-import { AppError } from '../../shared/v2/errors/index.js';
+import { AppError } from '../../shared/modules/errors/index.js';
 import { logger } from '../lib/logger.js';
 
 interface ErrorResponse {
@@ -57,3 +57,4 @@ export const globalErrorHandler = (
 
   res.status(statusCode).json(response);
 };
+

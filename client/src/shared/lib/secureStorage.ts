@@ -5,7 +5,7 @@
  * Automatically serializes/deserializes JSON objects.
  * Falls back to in-memory storage if quota exceeded or disabled.
  */
-import { encrypt, decrypt } from '@shared/v2/lib/encryption';
+import { encrypt, decrypt } from '@shared/modules/lib/encryption';
 
 type StorageType = 'local' | 'session';
 
@@ -94,3 +94,4 @@ class SecureStorageAPI {
 
 export const SecureLocalStorage = new SecureStorageAPI('local');
 export const SecureSessionStorage = new SecureStorageAPI('session');
+

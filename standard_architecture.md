@@ -46,9 +46,9 @@ The system uses a **database-per-tenant** architecture. Every tenant has their *
 **Rules for DB Connection:**
 | # | Rule |
 |---|---|
-| 1 | Always use `getDb()` from `server/v2/db.ts` inside repositories — this returns the correct tenant-scoped Drizzle instance |
+| 1 | Always use `getDb()` from `server/modules/db.ts` inside repositories — this returns the correct tenant-scoped Drizzle instance |
 | 2 | Never import `pool` or `db` directly from `server/db.ts` — doing so bypasses tenant isolation |
-| 3 | Every table MUST be defined in `shared/v2/<module>/schema.ts` using Drizzle ORM |
+| 3 | Every table MUST be defined in `shared/modules/<module>/schema.ts` using Drizzle ORM |
 | 4 | Every table MUST have a migration file under `migrations/NNNN_*.sql` |
 | 5 | Use `drizzle-zod` (`createInsertSchema`) to auto-generate Zod schemas from table definitions |
 | 6 | Never use raw SQL strings in repositories — always use Drizzle's typed query builders |
@@ -299,7 +299,7 @@ INSERT INTO schema_migrations (filename) VALUES ('0113_add_my_new_table.sql');
 Every endpoint MUST declare the minimum `userType` required. Do NOT rely only on authentication.
 
 ```typescript
-// shared/v2/auth/permissions.ts
+// shared/modules/auth/permissions.ts
 export const UserType = {
   ADMIN:   "admin",
   MANAGER: "manager",
@@ -323,9 +323,9 @@ export function hasPermission(userType: UserType, required: UserType): boolean {
 ```
 
 ```typescript
-// server/v2/middleware/requireRole.ts
+// server/modules/middleware/requireRole.ts
 import { Request, Response, NextFunction } from "express";
-import { hasPermission, UserType } from "@shared/v2/auth/permissions";
+import { hasPermission, UserType } from "@shared/modules/auth/permissions";
 
 export function requireRole(minRole: UserType) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -402,7 +402,7 @@ app.use("/api/v2/auth/refresh", authRateLimiter);
 ### SEC-3: Input Sanitization
 
 ```typescript
-// server/v2/utils/sanitize.ts
+// server/modules/utils/sanitize.ts
 import DOMPurify from "isomorphic-dompurify";
 
 export function sanitizeString(value: string): string {
@@ -620,7 +620,7 @@ POST   /api/v2/auth/logout             ← Invalidate refresh token (auth requir
 Never throw raw `Error` or return generic 500s. Use a typed error hierarchy so every thrown error maps to a deterministic HTTP response.
 
 ```typescript
-// server/v2/utils/AppError.ts
+// server/modules/utils/AppError.ts
 export class AppError extends Error {
   constructor(
     public readonly message: string,
@@ -665,7 +665,7 @@ export class ConflictError extends AppError {
 Register this as the **last** middleware in `server/index.ts`. It catches every thrown error and formats a consistent response.
 
 ```typescript
-// server/v2/middleware/errorHandler.ts
+// server/modules/middleware/errorHandler.ts
 import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 import { AppError } from "../utils/AppError";
@@ -742,7 +742,7 @@ async create(tenantId: string, dto: unknown) {
 Every endpoint MUST return a consistent shape. Inconsistent responses break frontend type safety and client SDK generation.
 
 ```typescript
-// server/v2/utils/response.ts
+// server/modules/utils/response.ts
 export function successResponse<T>(data: T, meta?: Record<string, unknown>) {
   return { success: true, data, ...(meta ? { meta } : {}) };
 }
@@ -789,7 +789,7 @@ return res.status(200).json(paginatedResponse(rows, total, page, limit));
 Any operation that writes to **more than one table** MUST be wrapped in a database transaction. Partial writes are silent data corruption.
 
 ```typescript
-// server/v2/utils/transaction.ts
+// server/modules/utils/transaction.ts
 import { getDb } from "../db";
 
 export async function withTransaction<T>(
@@ -824,7 +824,7 @@ async createInvoiceWithItems(tenantId: string, dto: CreateInvoiceDto) {
 The app MUST validate all required environment variables at startup. A missing variable should crash immediately with a clear message — not at runtime when a user hits an endpoint.
 
 ```typescript
-// server/v2/config/env.ts
+// server/modules/config/env.ts
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -860,7 +860,7 @@ import "./v2/config/env";   // crashes here if env is invalid
 During deploys, the process receives SIGTERM. Without a handler, in-flight DB queries and BullMQ jobs are killed mid-execution, causing data corruption.
 
 ```typescript
-// server/v2/shutdown.ts
+// server/modules/shutdown.ts
 import { db } from "./db";
 import { redisClient } from "./utils/redis";
 import { emailWorker } from "./queues/emailQueue";
@@ -910,7 +910,7 @@ registerGracefulShutdown(server);
 BullMQ jobs MUST define retry behavior and a failure handler. Silent job failures are invisible data loss.
 
 ```typescript
-// server/v2/queues/emailQueue.ts
+// server/modules/queues/emailQueue.ts
 import { Queue, Worker, QueueEvents } from "bullmq";
 import { redisClient } from "../utils/redis";
 import { logger } from "../utils/logger";
@@ -947,7 +947,7 @@ emailWorker.on("error", (err) => {
 `/api/health` MUST actively probe dependencies and return `503` when degraded — not just `200 OK` always.
 
 ```typescript
-// server/v2/health/health.controller.ts
+// server/modules/health/health.controller.ts
 import { Request, Response } from "express";
 import { getDb } from "../db";
 import { redisClient } from "../utils/redis";
@@ -992,7 +992,7 @@ app.get("/api/health", healthCheck);
 ### Structured Logging (Pino)
 
 ```typescript
-// server/v2/middleware/requestLogger.ts
+// server/modules/middleware/requestLogger.ts
 import pino from "pino";
 import { v4 as uuidv4 } from "uuid";
 
@@ -1017,7 +1017,7 @@ export function requestLogger(req, res, next) {
 ### Audit Service
 
 ```typescript
-// server/v2/shared/auditService.ts
+// server/modules/shared/auditService.ts
 export interface AuditEvent {
   tenantId: string;
   userId: string;
@@ -1057,7 +1057,7 @@ await auditService.log({
 ### Redis Cache Helpers
 
 ```typescript
-// server/v2/utils/cache.ts
+// server/modules/utils/cache.ts
 import { redisClient } from "./redis";
 
 export function tenantCacheKey(tenantId: string, ...parts: string[]): string {
@@ -1106,7 +1106,7 @@ export async function invalidateTenantCache(tenantId: string, pattern: string) {
 Every table MUST spread `...auditColumns`. This is the **single source of truth** for audit columns — never redefine these individually per table.
 
 ```typescript
-// shared/v2/schema/audit.ts
+// shared/modules/schema/audit.ts
 import { boolean, integer, text, timestamp } from "drizzle-orm/pg-core";
 
 export const auditColumns = {
@@ -1141,7 +1141,7 @@ export const auditColumns = {
 ### Table Schema Standard
 
 ```typescript
-// shared/v2/schema/<module>.ts
+// shared/modules/schema/<module>.ts
 import { pgTable, serial, text, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 import { auditColumns } from "./audit";
 
@@ -1434,7 +1434,7 @@ async getOrdersWithItems(tenantId: string) {
 ## 📄 PAGINATION (Required on All List Endpoints)
 
 ```typescript
-// server/v2/utils/pagination.ts
+// server/modules/utils/pagination.ts
 export interface PaginationParams {
   page: number;
   limit: number;
@@ -1493,14 +1493,14 @@ All TypeScript code MUST compile under strict mode. Add to `tsconfig.json`:
 ### File Layout
 
 ```
-server/v2/<module>/
+server/modules/<module>/
   ├── <module>.controller.ts     # HTTP only — zero business logic
   ├── <module>.service.ts        # Business logic — zero req/res
   ├── <module>.repository.ts     # DB queries — zero business rules
   ├── <module>.routes.ts         # Route declarations + middleware
   └── <module>.test.ts           # Integration tests
 
-shared/v2/<module>/
+shared/modules/<module>/
   ├── types.ts                   # Shared TypeScript types
   └── validators.ts              # Zod schemas
 
@@ -1539,7 +1539,7 @@ export class MyEntityController {
 ## 🔄 BACKGROUND JOBS (BullMQ)
 
 ```typescript
-// server/v2/queues/emailQueue.ts
+// server/modules/queues/emailQueue.ts
 import { Queue, Worker } from "bullmq";
 import { redisClient } from "../utils/redis";
 
@@ -1566,7 +1566,7 @@ export const emailWorker = new Worker("emails", async (job) => {
 - Route registered in `App.tsx` with `<ProtectedRoute>`
 - Every lazy-loaded route wrapped in `<ModuleErrorBoundary>`
 - No component file exceeds **3000 lines**
-- Types imported from `@shared/v2/<module>/types`
+- Types imported from `@shared/modules/<module>/types`
 
 ### Frontend Error Handling Standard
 
@@ -1635,7 +1635,7 @@ export class ModuleErrorBoundary extends Component<
 ## 🧪 TESTING STANDARD
 
 ```typescript
-// server/v2/<module>/<module>.test.ts
+// server/modules/<module>/<module>.test.ts
 describe("MyModule", () => {
   let tenantId: string;
   let token: string;
@@ -1758,9 +1758,9 @@ Before submitting any new module, verify every item:
 - [ ] **No N+1 queries** — uses `inArray()` batch loading or JOINs, never queries in loops
 
 ### Backend
-- [ ] All new code is under `server/v2/<module>/`
+- [ ] All new code is under `server/modules/<module>/`
 - [ ] Nothing added to `storage.ts`, `database.ts`, or `shared/schema.ts`
-- [ ] Every repository uses `getDb()` from `server/v2/db.ts`
+- [ ] Every repository uses `getDb()` from `server/modules/db.ts`
 - [ ] Controllers have ZERO business logic
 - [ ] Services have ZERO `req`/`res` references
 - [ ] Repositories have ZERO business rules
@@ -1786,7 +1786,7 @@ Before submitting any new module, verify every item:
 - [ ] Route registered in `App.tsx` with `<ProtectedRoute>`
 - [ ] Module entry is lazy-loaded AND wrapped in `<ModuleErrorBoundary>`
 - [ ] No component file exceeds 3000 lines
-- [ ] Types imported from `@shared/v2/<module>/types`
+- [ ] Types imported from `@shared/modules/<module>/types`
 
 ### Multi-Tenancy
 - [ ] Repository uses `getDb()` — not direct pool/db import
@@ -1832,7 +1832,7 @@ Before submitting any new module, verify every item:
 | 28 | Store base64 files without metadata columns | No way to filter by type, unknown file sizes | Always include `file_name`, `file_data`, `file_size`, `mime_type` |
 | 28b | Include `file_data` in list/getAll queries | Pulls MB of base64 per row, OOM risk at scale | Exclude `file_data` from list queries — fetch only on single-record GET |
 | 29 | Execute DB queries inside loops (N+1) | 100 records = 101 queries, API latency explodes | Use `inArray()` batch loading or JOINs — never query in a loop |
-| 30 | Redefine audit columns per table manually | Inconsistent columns, missing fields | Always spread `...auditColumns` from `shared/v2/schema/audit.ts` |
+| 30 | Redefine audit columns per table manually | Inconsistent columns, missing fields | Always spread `...auditColumns` from `shared/modules/schema/audit.ts` |
 
 ---
 
@@ -1884,3 +1884,4 @@ Before submitting any new module, verify every item:
 
 *Document Version: 2.0 — Strengthened for 50+ Client Scale*
 *Next Review: Before onboarding client #25*
+

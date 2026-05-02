@@ -3,7 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tenantFetch } from '../../shared/lib/queryClient';
-import type { Task, NewTask } from '@shared/v2/schema/tasks';
+import type { Task, NewTask } from '@shared/modules/schema/tasks';
 import type { PaginatedResponse, ApiResponse } from '../../shared/lib/validators';
 
 export const taskKeys = {
@@ -60,3 +60,4 @@ export const useDeleteTask = () => {
     },
   });
 };
+

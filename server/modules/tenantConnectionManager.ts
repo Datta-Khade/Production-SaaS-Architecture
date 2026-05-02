@@ -11,7 +11,7 @@
  */
 import { eq, and } from 'drizzle-orm';
 import { getMasterDb } from './db.js';
-import { tenantsTable, type Tenant } from '../../shared/v2/schema/tenants.js';
+import { tenantsTable, type Tenant } from '../../shared/modules/schema/tenants.js';
 import { cacheGet, cacheSet, tenantCacheKey, CACHE_TTL } from '../lib/cache.js';
 import { logger } from '../lib/logger.js';
 import { env } from '../env.js';
@@ -122,3 +122,4 @@ export const getTenantByDomain = async (domain: string): Promise<TenantConnectio
     throw err;
   }
 };
+

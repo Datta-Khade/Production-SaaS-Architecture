@@ -123,7 +123,7 @@ export const runTenantMigrations = async (
 };
 
 // ── CLI Entry Point ─────────────────────────────────────────
-// Runs when executed directly via: tsx server/v2/migrationRunner.ts
+// Runs when executed directly via: tsx server/modules/migrationRunner.ts
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.development' });
 
@@ -158,3 +158,4 @@ if (isDirectRun) {
     }
   })();
 }
+

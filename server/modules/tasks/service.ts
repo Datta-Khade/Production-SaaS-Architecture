@@ -3,7 +3,7 @@
  */
 import { tasksRepository } from './repository.js';
 import { auditLog } from '../lib/auditLog.js';
-import type { Task, NewTask } from '../../../shared/v2/schema/tasks.js';
+import type { Task, NewTask } from '../../../shared/modules/schema/tasks.js';
 
 interface RequestContext {
   user: { sub: string; email?: string };
@@ -84,3 +84,4 @@ export const tasksService = {
     });
   },
 };
+

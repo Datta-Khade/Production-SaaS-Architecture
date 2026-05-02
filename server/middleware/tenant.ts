@@ -8,9 +8,9 @@
  * 4. ALL subsequent queries in that request use this tenant-scoped connection
  */
 import { Request, Response, NextFunction } from 'express';
-import { UnauthorizedError, NotFoundError } from '../../shared/v2/errors/index.js';
-import { getTenantConnection, getTenantByDomain } from '../v2/tenantConnectionManager.js';
-import { runWithDb } from '../v2/db.js';
+import { UnauthorizedError, NotFoundError } from '../../shared/modules/errors/index.js';
+import { getTenantConnection, getTenantByDomain } from '../modules/tenantConnectionManager.js';
+import { runWithDb } from '../modules/db.js';
 import { env } from '../env.js';
 
 // Extend Express Request with tenant context

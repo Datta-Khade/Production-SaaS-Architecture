@@ -228,7 +228,7 @@ CREATE INDEX idx_tenants_active ON tenants(is_active) WHERE is_active = true;
 ### Standard Table Template (ALL tenant tables must follow this)
 
 ```typescript
-// shared/v2/<module>/schema.ts
+// shared/modules/<module>/schema.ts
 import { pgTable, serial, text, boolean, timestamp } from 'drizzle-orm/pg-core';
 import { auditColumns } from '../schema/audit';  // ALWAYS spread these
 
@@ -244,7 +244,7 @@ export const myEntityTable = pgTable('my_entity_v2', {
 ### Audit Columns (MANDATORY on every table)
 
 ```typescript
-// shared/v2/schema/audit.ts
+// shared/modules/schema/audit.ts
 export const auditColumns = {
   created_at:       timestamp('created_at').defaultNow().notNull(),
   updated_at:       timestamp('updated_at').defaultNow().notNull(),
@@ -303,7 +303,7 @@ Rules:
 ### Route Protection Pattern
 
 ```typescript
-// server/v2/<module>/routes.ts
+// server/modules/<module>/routes.ts
 router.get('/api/v2/items',
   authenticate,                    // Verify JWT, attach req.user
   requireTenant,                   // Resolve tenant DB connection
@@ -328,7 +328,7 @@ router.get('/api/v2/items',
 ### Controller Pattern
 
 ```typescript
-// server/v2/<module>/controller.ts
+// server/modules/<module>/controller.ts
 export const myController = {
   getAll: async (req: Request, res: Response) => {
     const { page, limit } = normalizePagination(req.query);
@@ -342,7 +342,7 @@ export const myController = {
 ### Service Pattern
 
 ```typescript
-// server/v2/<module>/service.ts
+// server/modules/<module>/service.ts
 export const myService = {
   getAll: async ({ tenantId, page, limit }: GetAllInput) => {
     // Pure business logic — no req, no res, no HTTP concepts
@@ -365,7 +365,7 @@ export const myService = {
 ### Repository Pattern
 
 ```typescript
-// server/v2/<module>/repository.ts
+// server/modules/<module>/repository.ts
 import { getDb } from '../../db';   // ALWAYS — never import db directly
 
 export const myRepository = {
@@ -668,7 +668,7 @@ volumes:
 - [ ] No N+1 queries — use `inArray()` batch or JOINs
 
 ### Backend
-- [ ] All new code under `server/v2/<module>/`
+- [ ] All new code under `server/modules/<module>/`
 - [ ] Every repository uses `getDb()` — never direct `db` or `pool` import
 - [ ] Controllers have ZERO business logic
 - [ ] Services have ZERO `req`/`res` references
@@ -825,9 +825,9 @@ volumes:
 
 The following are deliberate improvements over the base architecture reference:
 
-1. **Versioned from day 1**: All code under `server/v2/` even though it's fresh. When you need `v3` in 18 months, you won't be doing a painful migration.
+1. **Versioned from day 1**: All code under `server/modules/` even though it's fresh. When you need `v3` in 18 months, you won't be doing a painful migration.
 
-2. **Shared package is the contract**: `shared/v2/<module>/` contains types, validators, and schema. Frontend and backend import from here — this is the single source of truth. Drift between layers is impossible.
+2. **Shared package is the contract**: `shared/modules/<module>/` contains types, validators, and schema. Frontend and backend import from here — this is the single source of truth. Drift between layers is impossible.
 
 3. **`env.ts` is the boot gate**: The app REFUSES to start if any required env var is missing or malformed. No "undefined" surprises deep in a request handler.
 

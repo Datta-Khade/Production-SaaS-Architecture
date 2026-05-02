@@ -7,9 +7,9 @@
  * - All other routes go through auth + tenant middleware
  */
 import { Router } from 'express';
-import healthRoutes from './v2/health/routes.js';
-import authRoutes from './v2/auth/routes.js';
-import taskRoutes from './v2/tasks/routes.js';
+import healthRoutes from './modules/health/routes.js';
+import authRoutes from './modules/auth/routes.js';
+import taskRoutes from './modules/tasks/routes.js';
 
 const router = Router();
 

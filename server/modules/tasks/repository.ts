@@ -7,8 +7,8 @@
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../db.js';
-import { tasksTable, type Task, type NewTask } from '../../../shared/v2/schema/tasks.js';
-import { NotFoundError } from '../../../shared/v2/errors/index.js';
+import { tasksTable, type Task, type NewTask } from '../../../shared/modules/schema/tasks.js';
+import { NotFoundError } from '../../../shared/modules/errors/index.js';
 
 export const tasksRepository = {
   findAll: async (limit: number, offset: number): Promise<{ data: Task[]; total: number }> => {
@@ -83,3 +83,4 @@ export const tasksRepository = {
     }
   },
 };
+

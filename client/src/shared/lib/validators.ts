@@ -9,7 +9,7 @@ export {
   searchQuerySchema,
   buildResponse,
   buildPaginatedResponse,
-} from '@shared/v2/validators/common';
+} from '@shared/modules/validators/common';
 
 export type {
   LoginInput,
@@ -19,4 +19,5 @@ export type {
   ApiResponse,
   PaginatedResponse,
   PaginationMeta,
-} from '@shared/v2/validators/common';
+} from '@shared/modules/validators/common';
+

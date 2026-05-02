@@ -8,8 +8,8 @@
  * POST /api/v2/auth/logout          → Clear refresh token cookie
  */
 import { Request, Response } from 'express';
-import { loginSchema, changePasswordSchema } from '../../../shared/v2/validators/common.js';
-import { ValidationError } from '../../../shared/v2/errors/index.js';
+import { loginSchema, changePasswordSchema } from '../../../shared/modules/validators/common.js';
+import { ValidationError } from '../../../shared/modules/errors/index.js';
 import { authService } from './service.js';
 import { env } from '../../env.js';
 
@@ -137,3 +137,4 @@ export const authController = {
     res.json({ success: true, data: null, message: 'Logged out successfully' });
   },
 };
+

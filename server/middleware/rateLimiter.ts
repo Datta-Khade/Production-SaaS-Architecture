@@ -7,7 +7,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { getRedis } from '../lib/redis.js';
 import { env } from '../env.js';
-import { RateLimitError } from '../../shared/v2/errors/index.js';
+import { RateLimitError } from '../../shared/modules/errors/index.js';
 import { logger } from '../lib/logger.js';
 
 /**
@@ -55,3 +55,4 @@ export const rateLimiter = async (req: Request, res: Response, next: NextFunctio
     next();
   }
 };
+

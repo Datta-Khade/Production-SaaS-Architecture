@@ -28,8 +28,8 @@ process.on('unhandledRejection', (reason: unknown) => {
 });
 
 import { getRedis, closeRedis } from './lib/redis.js';
-import { closeAllPools } from './v2/db.js';
-import { runMigrations } from './v2/migrationRunner.js';
+import { closeAllPools } from './modules/db.js';
+import { runMigrations } from './modules/migrationRunner.js';
 import { createApp } from './app.js';
 import { setupVite, serveStatic, log } from './vite.js';
 

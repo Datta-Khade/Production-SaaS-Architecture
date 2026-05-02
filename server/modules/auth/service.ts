@@ -14,8 +14,8 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from '../../env.js';
 import type { JwtPayload, UserRole } from '../../middleware/auth.js';
-import { UnauthorizedError, ForbiddenError, ValidationError } from '../../../shared/v2/errors/index.js';
-import { hashToken } from '../../../shared/v2/lib/encryption.js';
+import { UnauthorizedError, ForbiddenError, ValidationError } from '../../../shared/modules/errors/index.js';
+import { hashToken } from '../../../shared/modules/lib/encryption.js';
 import { logger } from '../../lib/logger.js';
 import { getRawPool, runWithDb } from '../db.js';
 import { auditLog } from '../lib/auditLog.js';
@@ -370,3 +370,4 @@ export const authService = {
     return bcrypt.hash(password, 12);
   },
 };
+

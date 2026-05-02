@@ -16,7 +16,7 @@ import cookieParser from 'cookie-parser';
 import { env } from './env.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { globalErrorHandler } from './middleware/globalErrorHandler.js';
-import { NotFoundError } from '../shared/v2/errors/index.js';
+import { NotFoundError } from '../shared/modules/errors/index.js';
 import routes from './routes.js';
 
 export const createApp = (): express.Application => {
