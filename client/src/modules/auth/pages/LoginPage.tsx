@@ -108,19 +108,6 @@ const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {/* Domain */}
-          <div className="space-y-2">
-            <Label htmlFor="domain">Domain</Label>
-            <Input
-              id="domain"
-              type="text"
-              placeholder="dev.localhost"
-              autoComplete="organization"
-              {...register('domain')}
-              className={errors.domain ? 'border-red-500 focus-visible:ring-red-500' : ''}
-            />
-            {errors.domain && <p className="text-xs text-red-500">{errors.domain.message}</p>}
-          </div>
 
           {/* Username */}
           <div className="space-y-2">
@@ -128,7 +115,6 @@ const LoginPage: React.FC = () => {
             <Input
               id="username"
               type="text"
-              placeholder="admin@dev.localhost"
               autoComplete="username"
               {...register('username')}
               className={errors.username ? 'border-red-500 focus-visible:ring-red-500' : ''}
@@ -142,12 +128,24 @@ const LoginPage: React.FC = () => {
             <Input
               id="password"
               type="password"
-              placeholder="••••••••"
               autoComplete="current-password"
               {...register('password')}
               className={errors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}
             />
             {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+          </div>
+
+          {/* Domain */}
+          <div className="space-y-2">
+            <Label htmlFor="domain">Domain</Label>
+            <Input
+              id="domain"
+              type="text"
+              autoComplete="organization"
+              {...register('domain')}
+              className={errors.domain ? 'border-red-500 focus-visible:ring-red-500' : ''}
+            />
+            {errors.domain && <p className="text-xs text-red-500">{errors.domain.message}</p>}
           </div>
 
           {/* Submit */}
@@ -170,13 +168,6 @@ const LoginPage: React.FC = () => {
             )}
           </Button>
 
-          {/* Dev hint */}
-          <div className="text-[10px] text-gray-400 text-center pt-2 space-y-1">
-            <p className="font-semibold text-gray-500 uppercase tracking-wider">Dev Credentials</p>
-            <p>Domain: <code className="font-mono bg-gray-50 px-1">dev.localhost</code></p>
-            <p>User: <code className="font-mono bg-gray-50 px-1">admin@dev.localhost</code></p>
-            <p>Pass: <code className="font-mono bg-gray-50 px-1">Admin@1234</code></p>
-          </div>
 
         </form>
       </div>
