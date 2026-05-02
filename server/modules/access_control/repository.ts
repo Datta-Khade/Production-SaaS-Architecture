@@ -83,5 +83,82 @@ export const accessControlRepository = {
         )
       )
       .orderBy(menuMasterTable.sort_order);
+  },
+
+  /**
+   * Fetch ALL menus from Master DB (for management)
+   */
+  async getAllMenus() {
+    const masterDb = getMasterDb(env.MASTER_DATABASE_URL);
+    return masterDb
+      .select()
+      .from(menuMasterTable)
+      .where(eq(menuMasterTable.is_deleted, false))
+      .orderBy(menuMasterTable.sort_order);
+  },
+
+  /**
+   * Create a new menu in Master DB
+   */
+  async createMenu(data: any) {
+    const masterDb = getMasterDb(env.MASTER_DATABASE_URL);
+    return masterDb
+      .insert(menuMasterTable)
+      .values(data)
+      .returning();
+  },
+
+  /**
+   * Update an existing menu in Master DB
+   */
+  async updateMenu(muid: string, data: any) {
+    const masterDb = getMasterDb(env.MASTER_DATABASE_URL);
+    return masterDb
+      .update(menuMasterTable)
+      .set({ ...data, updated_at: new Date() })
+      .where(eq(menuMasterTable.muid, muid))
+      .returning();
+  },
+
+  /**
+   * Soft delete a menu in Master DB AND cleanup current tenant permissions
+   */
+  async deleteMenu(muid: string) {
+    const masterDb = getMasterDb(env.MASTER_DATABASE_URL);
+    const db = getDb();
+
+    // 1. Soft delete from Master DB (Impacts ALL tenants)
+    await masterDb
+      .update(menuMasterTable)
+      .set({ is_deleted: true, updated_at: new Date() })
+      .where(eq(menuMasterTable.muid, muid));
+
+    // 2. Soft delete from current Tenant DB (Cleanup)
+    return db
+      .update(roleAccessTable)
+      .set({ is_deleted: true, updated_at: new Date() })
+      .where(eq(roleAccessTable.menu_uuid, muid))
+      .returning();
+  },
+
+  /**
+   * Grant permission to a menu for a role in Tenant DB
+   */
+  async grantMenuPermission(roleUuid: string, menuMuid: string) {
+    const db = getDb();
+    const rauid = `acc-${Math.random().toString(36).substring(2, 9)}`;
+    return db
+      .insert(roleAccessTable)
+      .values({
+        rauid,
+        role_uuid: roleUuid,
+        menu_uuid: menuMuid,
+        canview: true,
+        cancreate: true,
+        canedit: true,
+        candelete: true,
+        sort_order: 1
+      })
+      .returning();
   }
 };

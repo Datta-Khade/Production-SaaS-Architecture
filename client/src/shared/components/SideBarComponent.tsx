@@ -5,10 +5,13 @@ import {
     Settings, 
     Users, 
     Activity,
+    Shield,
+    Lock,
+    Menu,
     type LucideIcon 
 } from 'lucide-react';
 import React, { useMemo } from 'react'
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useViewport, getLayoutConfig } from '@/shared/hooks/useViewport';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { useNavigation } from '../hooks/useNavigation';
@@ -22,7 +25,10 @@ const iconMap: Record<string, LucideIcon> = {
     LayoutGrid,
     Settings,
     Users,
-    Activity
+    Activity,
+    Shield,
+    Lock,
+    Menu
 };
 
 type SideBarComponentProps = {
@@ -42,6 +48,7 @@ export default function SideBarComponent({
     onCloseMobileSidebar: _onCloseMobileSidebar
 }: SideBarComponentProps) {
     const location = useLocation();
+    const navigate = useNavigate();
     const viewport = useViewport();
     const { headerItems, getSidebarItems, isLoading } = useNavigation();
 
@@ -80,7 +87,7 @@ export default function SideBarComponent({
                                         isActive ? "bg-[#52baf3]" : "bg-[#16569e] hover:bg-[#1e5fa8]"
                                     }`}
                                     style={{ height: isCompact ? '56px' : '79px' }}
-                                    onClick={() => item.route && (window.location.href = item.route)}
+                                    onClick={() => item.route && navigate(item.route)}
                                 >
                                     <div className="text-white text-[10px] font-normal font-['Roboto',Helvetica] flex flex-col items-center justify-center text-center">
                                         <div className={isCompact ? '' : 'mb-1'}>

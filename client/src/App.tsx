@@ -13,6 +13,7 @@ import { ModuleErrorBoundary } from './shared/components/ErrorBoundary';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { PageSkeleton } from './shared/components/PageSkeleton';
 import { AppLayout } from './shared/layouts/AppLayout';
+import ComingSoonPage from './shared/components/ComingSoonPage';
 import { apiRequest } from './shared/lib/queryClient';
 import { setAccessToken, getTenantDomain } from './shared/lib/auth';
 
@@ -22,6 +23,9 @@ const LoginPage = lazy(() => import('./modules/auth/pages/LoginPage'));
 const DashboardPage = lazy(() => import('./modules/dashboard/pages/DashboardPage'));
 const TasksPage = lazy(() => import('./modules/tasks/pages/TasksPage'));
 const UITestPage = lazy(() => import('./modules/dev/UITestPage'));
+const UsersPage = lazy(() => import('./modules/admin/pages/UsersPage'));
+const RolesPage = lazy(() => import('./modules/admin/pages/RolesPage'));
+const MenuMasterPage = lazy(() => import('./modules/admin/pages/MenuMasterPage'));
 
 const App: React.FC = () => {
   const [isCheckingAuth, setIsCheckingAuth] = React.useState(true);
@@ -103,6 +107,42 @@ const App: React.FC = () => {
             </ModuleErrorBoundary>
           }
         />
+
+        {/* Admin Module */}
+        <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
+        <Route
+          path="/admin/users"
+          element={
+            <ModuleErrorBoundary moduleName="Admin/Users">
+              <Suspense fallback={<PageSkeleton />}>
+                <UsersPage />
+              </Suspense>
+            </ModuleErrorBoundary>
+          }
+        />
+        <Route
+          path="/admin/roles"
+          element={
+            <ModuleErrorBoundary moduleName="Admin/Roles">
+              <Suspense fallback={<PageSkeleton />}>
+                <RolesPage />
+              </Suspense>
+            </ModuleErrorBoundary>
+          }
+        />
+        <Route
+          path="/admin/menus"
+          element={
+            <ModuleErrorBoundary moduleName="Admin/Menus">
+              <Suspense fallback={<PageSkeleton />}>
+                <MenuMasterPage />
+              </Suspense>
+            </ModuleErrorBoundary>
+          }
+        />
+
+        {/* Fallback for dynamic menus not yet implemented */}
+        <Route path="*" element={<ComingSoonPage />} />
 
         {/* Add more module routes here as they are built */}
         {/* Example:

@@ -13,6 +13,8 @@ import {
     Settings,
     Users,
     Activity,
+    Shield,
+    Lock,
     type LucideIcon
 } from "lucide-react";
 import logo from '../../assets/logo.svg';
@@ -28,7 +30,10 @@ const iconMap: Record<string, LucideIcon> = {
     LayoutGrid,
     Settings,
     Users,
-    Activity
+    Activity,
+    Shield,
+    Lock,
+    Menu
 };
 
 
