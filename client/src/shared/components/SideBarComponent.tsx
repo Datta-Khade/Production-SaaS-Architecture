@@ -1,7 +1,29 @@
-import { LayoutGrid } from 'lucide-react';
-import React from 'react'
+import { 
+    LayoutGrid, 
+    BarChart3, 
+    FileText, 
+    Settings, 
+    Users, 
+    Activity,
+    type LucideIcon 
+} from 'lucide-react';
+import React, { useMemo } from 'react'
+import { useLocation } from 'react-router-dom';
 import { useViewport, getLayoutConfig } from '@/shared/hooks/useViewport';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
+import { useNavigation } from '../hooks/useNavigation';
+
+/**
+ * Map of icon names (from DB) to Lucide components
+ */
+const iconMap: Record<string, LucideIcon> = {
+    BarChart3,
+    FileText,
+    LayoutGrid,
+    Settings,
+    Users,
+    Activity
+};
 
 type SideBarComponentProps = {
     selectedAdminPage: string;
@@ -11,28 +33,34 @@ type SideBarComponentProps = {
     onCloseMobileSidebar?: () => void;
 };
 
-// Simplified sidebar list to only show "All" as per user request
-const sideBarList: { name: string; icon: React.ReactNode; page: string }[] = [
-    {
-        name: "All",
-        icon: <LayoutGrid size={20} className='text-white' />,
-        page: "all"
-    }
-]
 
 export default function SideBarComponent({ 
-    selectedAdminPage, 
-    setSelectedAdminPage, 
-    allowedPages = sideBarList.map(item => item.page),
+    selectedAdminPage: _selectedAdminPage, 
+    setSelectedAdminPage: _setSelectedAdminPage, 
+    allowedPages: _allowedPages,
     isMobileSidebarOpen: _isMobileSidebarOpen,
     onCloseMobileSidebar: _onCloseMobileSidebar
 }: SideBarComponentProps) {
+    const location = useLocation();
     const viewport = useViewport();
+    const { headerItems, getSidebarItems, isLoading } = useNavigation();
+
+    // Determine the active header module based on the current URL
+    const activeHeader = useMemo(() => {
+        return headerItems.find(item => 
+            item.route === '/' 
+                ? location.pathname === '/' 
+                : location.pathname.startsWith(item.route || '')
+        );
+    }, [headerItems, location.pathname]);
+
+    const sidebarItems = useMemo(() => {
+        return getSidebarItems(activeHeader?.muid || null);
+    }, [activeHeader, getSidebarItems]);
+
     const layoutConfig = getLayoutConfig(viewport);
     const isCompact = layoutConfig.sidebarMode === 'compact';
     const sidebarWidth = layoutConfig.sidebarWidth;
-
-    const filteredItems = sideBarList.filter(item => allowedPages.includes(item.page));
 
     return (
         <TooltipProvider>
@@ -40,35 +68,40 @@ export default function SideBarComponent({
                 className="fixed left-0 top-[67px] h-[calc(100vh-67px)] z-50 flex flex-col transition-all duration-200"
                 style={{ width: `${sidebarWidth}px` }}
             >
-                {filteredItems.map(item => (
-                    <Tooltip key={item.page} delayDuration={0}>
-                        <TooltipTrigger asChild>
-                            <div
-                                className={`w-full flex flex-col items-center justify-center cursor-pointer flex-shrink-0 transition-all duration-200 ${
-                                    selectedAdminPage === item.page ? "bg-[#52baf3]" : "bg-[#16569e] hover:bg-[#1e5fa8]"
-                                }`}
-                                style={{ height: isCompact ? '56px' : '79px' }}
-                                onClick={() => setSelectedAdminPage(item.page)}
-                            >
-                                <div className="text-white text-[10px] font-normal font-['Roboto',Helvetica] flex flex-col items-center justify-center text-center">
-                                    <div className={isCompact ? '' : 'mb-1'}>
-                                        {item.icon}
-                                    </div>
-                                    {!isCompact && (
-                                        <div className="leading-tight break-words hyphens-auto max-w-full">
-                                            {item.name}
+                {!isLoading && sidebarItems.map(item => {
+                    const Icon = iconMap[item.iconName || ''] || LayoutGrid;
+                    const isActive = location.pathname === item.route;
+
+                    return (
+                        <Tooltip key={item.muid} delayDuration={0}>
+                            <TooltipTrigger asChild>
+                                <div
+                                    className={`w-full flex flex-col items-center justify-center cursor-pointer flex-shrink-0 transition-all duration-200 ${
+                                        isActive ? "bg-[#52baf3]" : "bg-[#16569e] hover:bg-[#1e5fa8]"
+                                    }`}
+                                    style={{ height: isCompact ? '56px' : '79px' }}
+                                    onClick={() => item.route && (window.location.href = item.route)}
+                                >
+                                    <div className="text-white text-[10px] font-normal font-['Roboto',Helvetica] flex flex-col items-center justify-center text-center">
+                                        <div className={isCompact ? '' : 'mb-1'}>
+                                            <Icon size={20} className='text-white' />
                                         </div>
-                                    )}
+                                        {!isCompact && (
+                                            <div className="leading-tight break-words hyphens-auto max-w-full">
+                                                {item.displayName}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        </TooltipTrigger>
-                        {isCompact && (
-                            <TooltipContent side="right" className="bg-[#16569e] text-white border-none">
-                                {item.name}
-                            </TooltipContent>
-                        )}
-                    </Tooltip>
-                ))}
+                            </TooltipTrigger>
+                            {isCompact && (
+                                <TooltipContent side="right" className="bg-[#16569e] text-white border-none">
+                                    {item.displayName}
+                                </TooltipContent>
+                            )}
+                        </Tooltip>
+                    );
+                })}
                 <div className="w-full flex-1 bg-[#16569e]" />
             </aside>
         </TooltipProvider>

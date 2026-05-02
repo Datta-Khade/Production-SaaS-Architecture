@@ -13,6 +13,8 @@ import { ModuleErrorBoundary } from './shared/components/ErrorBoundary';
 import { ProtectedRoute } from './shared/components/ProtectedRoute';
 import { PageSkeleton } from './shared/components/PageSkeleton';
 import { AppLayout } from './shared/layouts/AppLayout';
+import { apiRequest } from './shared/lib/queryClient';
+import { setAccessToken, getTenantDomain } from './shared/lib/auth';
 
 import { Toaster } from './shared/components/ui/toaster';
 
@@ -22,6 +24,36 @@ const TasksPage = lazy(() => import('./modules/tasks/pages/TasksPage'));
 const UITestPage = lazy(() => import('./modules/dev/UITestPage'));
 
 const App: React.FC = () => {
+  const [isCheckingAuth, setIsCheckingAuth] = React.useState(true);
+
+  React.useEffect(() => {
+    const checkSession = async () => {
+      const domain = getTenantDomain();
+      if (!domain) {
+        setIsCheckingAuth(false);
+        return;
+      }
+
+      try {
+        // Attempt silent refresh
+        const res = await apiRequest<{ data: { accessToken: string } }>('POST', '/auth/refresh');
+        if (res.data?.accessToken) {
+          setAccessToken(res.data.accessToken);
+        }
+      } catch (err) {
+        console.warn('Initial session check failed', err);
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkSession();
+  }, []);
+
+  if (isCheckingAuth) {
+    return <PageSkeleton />;
+  }
+
   return (
     <>
       <Routes>

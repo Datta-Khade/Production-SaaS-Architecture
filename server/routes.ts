@@ -10,6 +10,7 @@ import { Router } from 'express';
 import healthRoutes from './modules/health/routes.js';
 import authRoutes from './modules/auth/routes.js';
 import taskRoutes from './modules/tasks/routes.js';
+import accessControlRoutes from './modules/access_control/routes.js';
 
 const router = Router();
 
@@ -19,5 +20,6 @@ router.use(authRoutes);
 
 // Authenticated module routes will be added here as modules are built
 router.use(taskRoutes);
+router.use(accessControlRoutes);
 
 export default router;

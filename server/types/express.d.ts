@@ -1,10 +1,12 @@
-declare namespace Express {
-  interface Request {
-    user?: {
-      sub: string;
-      email?: string;
-      role?: string;
+import { JwtPayload } from '../middleware/auth.js';
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JwtPayload;
       tenantId?: string;
-    };
+    }
   }
 }
+
+export {};

@@ -13,34 +13,47 @@ import jwt from 'jsonwebtoken';
 import { env } from '../env.js';
 import { UnauthorizedError, ForbiddenError } from '../../shared/modules/errors/index.js';
 
-// Extend Express Request with user context
-declare global {
-  namespace Express {
-    interface Request {
-      user?: JwtPayload;
-    }
-  }
-}
+import { accessControlRepository } from '../modules/access_control/repository.js';
+import { logger } from '../lib/logger.js';
 
 export interface JwtPayload {
   sub: string;       // userUuid
   email: string;
-  role: UserRole;
+  role: string;      // Now dynamic from rolemaster
   domain: string;    // tenant domain — fallback tenant resolution
   iat: number;
   exp: number;
+  tenantId?: string;
 }
 
 export type UserRole = 'superadmin' | 'admin' | 'manager' | 'user';
 
 /**
- * Role hierarchy — higher index = more permissions
+ * Cached role hierarchy to avoid DB lookups on every request.
+ * Maps role name -> orderby value.
  */
-const ROLE_HIERARCHY: Record<UserRole, number> = {
-  user:       0,
-  manager:    1,
-  admin:      2,
-  superadmin: 3,
+let roleHierarchyCache: Record<string, number> | null = null;
+let lastCacheUpdate = 0;
+const CACHE_TTL = 1000 * 60 * 5; // 5 minutes
+
+const getRoleHierarchy = async (): Promise<Record<string, number>> => {
+  if (roleHierarchyCache && (Date.now() - lastCacheUpdate < CACHE_TTL)) {
+    return roleHierarchyCache;
+  }
+
+  try {
+    const roles = await accessControlRepository.getAllRoles();
+    const hierarchy: Record<string, number> = {};
+    roles.forEach(r => {
+      hierarchy[r.assigned_role] = r.orderby ?? 0;
+    });
+    roleHierarchyCache = hierarchy;
+    lastCacheUpdate = Date.now();
+    return hierarchy;
+  } catch (err) {
+    logger.error({ error: (err as Error).message }, 'Failed to fetch role hierarchy from DB');
+    return {}; // Fallback to empty if DB fails
+  }
 };
 
 /**
@@ -90,14 +103,20 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
  * 
  * Usage: requireRole('admin') — allows admin and superadmin
  */
-export const requireRole = (minimumRole: UserRole) => {
-  return (req: Request, _res: Response, next: NextFunction): void => {
+export const requireRole = (minimumRole: string) => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedError('Authentication required');
     }
 
-    const userLevel = ROLE_HIERARCHY[req.user.role];
-    const requiredLevel = ROLE_HIERARCHY[minimumRole];
+    const hierarchy = await getRoleHierarchy();
+    const userRole = req.user.role;
+    if (!userRole) {
+      throw new UnauthorizedError('User role not found');
+    }
+
+    const userLevel = hierarchy[userRole];
+    const requiredLevel = hierarchy[minimumRole];
 
     if (userLevel === undefined || userLevel < requiredLevel) {
       throw new ForbiddenError(`Insufficient permissions. Required: ${minimumRole}, Current: ${req.user.role}`);

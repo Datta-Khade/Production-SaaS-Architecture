@@ -34,9 +34,11 @@ interface DbUser {
   email: string;
   username: string;
   password_hash: string;
-  role: UserRole;
+  role: string;
+  assigned_role: string | null;
   first_name: string;
   last_name: string;
+  role_name: string; // Helper for logic
   is_active: boolean;
   failed_login_count: number;
   locked_until: Date | null;
@@ -87,7 +89,7 @@ export const authService = {
 
       // Look up user by username OR email
       const result = await db.query<DbUser>(
-      `SELECT uuid, email, username, password_hash, role, first_name, last_name,
+      `SELECT uuid, email, username, password_hash, role, assigned_role, first_name, last_name,
               is_active, failed_login_count, locked_until
        FROM users_v2
        WHERE (username = $1 OR email = $1)
@@ -190,7 +192,7 @@ export const authService = {
     const { accessToken, refreshToken } = generateTokens({
       sub:    user.uuid,
       email:  user.email,
-      role:   user.role,
+      role:   user.assigned_role || user.role, // Fallback to legacy role if assigned_role is null
       domain: _domain,
     });
 
@@ -242,7 +244,7 @@ export const authService = {
     // Find token in DB
     const result = await db.query(
       `SELECT rt.uuid, rt.user_uuid, rt.is_revoked, rt.expires_at,
-              u.email, u.role, u.is_active, u.is_deleted
+              u.email, u.role, u.assigned_role, u.is_active, u.is_deleted
        FROM refresh_tokens_v2 rt
        JOIN users_v2 u ON u.uuid = rt.user_uuid
        WHERE rt.token_hash = $1`,
@@ -269,7 +271,7 @@ export const authService = {
     const { accessToken, refreshToken: newRefreshToken } = generateTokens({
       sub:    tokenRow.user_uuid,
       email:  tokenRow.email,
-      role:   tokenRow.role,
+      role:   tokenRow.assigned_role || tokenRow.role,
       domain: 'localhost',
     });
 

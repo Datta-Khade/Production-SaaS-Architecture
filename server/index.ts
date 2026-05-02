@@ -29,7 +29,7 @@ process.on('unhandledRejection', (reason: unknown) => {
 
 import { getRedis, closeRedis } from './lib/redis.js';
 import { closeAllPools } from './modules/db.js';
-import { runMigrations } from './modules/migrationRunner.js';
+import { runMigrations, runTenantMigrations } from './modules/migrationRunner.js';
 import { createApp } from './app.js';
 import { setupVite, serveStatic, log } from './vite.js';
 
@@ -50,6 +50,12 @@ const start = async (): Promise<void> => {
   try {
     await runMigrations(env.MASTER_DATABASE_URL, path.resolve(__dirname, '../migrations', 'master'));
     logger.info('✅ Master DB migrations complete');
+
+    // Also run tenant migrations for the default dev DB if present
+    if (env.DATABASE_URL) {
+      await runTenantMigrations(env.DATABASE_URL);
+      logger.info('✅ Default Tenant DB migrations complete');
+    }
   } catch (err) {
     logger.error({ error: (err as Error).message }, '❌ Migration failed — server will not start');
     process.exit(1);

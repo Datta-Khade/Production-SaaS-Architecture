@@ -15,6 +15,10 @@ import { tenantsTable, type Tenant } from '../../shared/modules/schema/tenants.j
 import { cacheGet, cacheSet, tenantCacheKey, CACHE_TTL } from '../lib/cache.js';
 import { logger } from '../lib/logger.js';
 import { env } from '../env.js';
+import { runTenantMigrations } from './migrationRunner.js';
+
+// Cache for tracking which tenants have already been migrated in this session
+const migratedTenants = new Set<string>();
 
 export interface TenantConnection {
   tuid: string;
@@ -69,9 +73,19 @@ export const getTenantConnection = async (tuid: string): Promise<TenantConnectio
       isActive: tenant.is_active ?? false,
     };
 
-    // 3. Cache in Redis (TTL 5 min)
-    await cacheSet(cacheKey, connection, CACHE_TTL.TENANT);
-    logger.debug({ tuid }, 'Tenant resolved from master DB and cached');
+    // 4. Run pending migrations on tenant DB (Lazily)
+    if (!migratedTenants.has(connection.tuid)) {
+      try {
+        logger.info({ tuid: connection.tuid, domain: connection.domain }, '🛠️ Running pending migrations for tenant...');
+        await runTenantMigrations(connection.dbUrl);
+        migratedTenants.add(connection.tuid);
+        logger.info({ tuid: connection.tuid }, '✅ Tenant migrations complete');
+      } catch (migrationErr) {
+        logger.error({ tuid: connection.tuid, error: (migrationErr as Error).message }, '❌ Failed to run tenant migrations');
+        // Do not return connection if migrations failed
+        throw migrationErr;
+      }
+    }
 
     return connection;
   } catch (err) {
@@ -116,6 +130,20 @@ export const getTenantByDomain = async (domain: string): Promise<TenantConnectio
     };
 
     await cacheSet(cacheKey, connection, CACHE_TTL.TENANT);
+
+    // 4. Run pending migrations on tenant DB (Lazily)
+    if (!migratedTenants.has(connection.tuid)) {
+      try {
+        logger.info({ tuid: connection.tuid, domain: connection.domain }, '🛠️ Running pending migrations for tenant...');
+        await runTenantMigrations(connection.dbUrl);
+        migratedTenants.add(connection.tuid);
+        logger.info({ tuid: connection.tuid }, '✅ Tenant migrations complete');
+      } catch (migrationErr) {
+        logger.error({ tuid: connection.tuid, error: (migrationErr as Error).message }, '❌ Failed to run tenant migrations');
+        throw migrationErr;
+      }
+    }
+
     return connection;
   } catch (err) {
     logger.error({ domain, error: (err as Error).message }, 'Failed to resolve tenant by domain');

@@ -13,14 +13,6 @@ import { getTenantConnection, getTenantByDomain } from '../modules/tenantConnect
 import { runWithDb } from '../modules/db.js';
 import { env } from '../env.js';
 
-// Extend Express Request with tenant context
-declare global {
-  namespace Express {
-    interface Request {
-      tenantId?: string;
-    }
-  }
-}
 
 /**
  * Resolve tenant from request headers or JWT domain claim.

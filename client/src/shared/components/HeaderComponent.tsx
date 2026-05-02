@@ -8,33 +8,29 @@ import {
     Menu,
     X,
     PanelLeft,
-    LogOut
+    LogOut,
+    LayoutGrid,
+    Settings,
+    Users,
+    Activity,
+    type LucideIcon
 } from "lucide-react";
 import logo from '../../assets/logo.svg';
 import { ModuleNavigator } from './ModuleNavigator';
+import { useNavigation } from '../hooks/useNavigation';
 
-const navItems = [
-    {
-        label: "Dashboard",
-        href: "/dashboard",
-        menuName: "Dashboard",
-        icon: BarChart3,
-        activeBg: "#5DADE2",
-        activeText: "white",
-        inactiveBg: "#f1f1f1",
-        inactiveText: "#4f5863",
-    },
-    {
-        label: "Tasks",
-        href: "/tasks",
-        menuName: "Tasks",
-        icon: FileText,
-        activeBg: "#5DADE2",
-        activeText: "white",
-        inactiveBg: "#f1f1f1",
-        inactiveText: "#4f5863",
-    },
-];
+/**
+ * Map of icon names (from DB) to Lucide components
+ */
+const iconMap: Record<string, LucideIcon> = {
+    BarChart3,
+    FileText,
+    LayoutGrid,
+    Settings,
+    Users,
+    Activity
+};
+
 
 interface HeaderComponentProps {
     showSidebarToggle?: boolean;
@@ -54,6 +50,7 @@ export default function HeaderComponent({
     const profileRef = useRef<HTMLDivElement>(null);
     const viewport = useViewport();
     const layoutConfig = getLayoutConfig(viewport);
+    const { headerItems, isLoading } = useNavigation();
 
     const [userName, setUserName] = useState('');
     const [domain, setDomain] = useState('');
@@ -140,22 +137,24 @@ export default function HeaderComponent({
 
                     <nav className="hidden xl:flex h-[65px] flex-1">
                         <div className="flex h-full">
-                            {navItems.map(({ label, href, icon: Icon, activeBg, activeText, inactiveBg, inactiveText }) => {
+                            {!isLoading && headerItems.map((item) => {
+                                const Icon = iconMap[item.iconName || ''] || LayoutGrid;
+                                const href = item.route || '/';
                                 const isActive = href === "/" ? location.pathname === "/" : location.pathname.startsWith(href);
                                 return (
-                                    <Link key={href} to={href}>
+                                    <Link key={item.muid} to={href}>
                                         <div
                                             className="flex flex-col items-center justify-center w-[100px] h-full cursor-pointer hover:bg-gray-300"
                                             style={{
-                                                backgroundColor: isActive ? activeBg : inactiveBg,
+                                                backgroundColor: isActive ? "#5DADE2" : "#f1f1f1",
                                             }}
                                         >
-                                            <Icon size={24} color={isActive ? activeText : "#6B7280"} className="mb-1" />
+                                            <Icon size={24} color={isActive ? "white" : "#6B7280"} className="mb-1" />
                                             <div
                                                 className="text-[10px] font-normal font-['Roboto',Helvetica]"
-                                                style={{ color: isActive ? activeText : inactiveText }}
+                                                style={{ color: isActive ? "white" : "#4f5863" }}
                                             >
-                                                {label}
+                                                {item.displayName}
                                             </div>
                                         </div>
                                     </Link>
@@ -166,22 +165,24 @@ export default function HeaderComponent({
 
                     <nav className="hidden md:flex xl:hidden h-[65px] flex-1 overflow-x-auto overflow-y-hidden">
                         <div className="flex h-full min-w-max">
-                            {navItems.map(({ label, href, icon: Icon, activeBg, activeText, inactiveBg, inactiveText }) => {
+                            {!isLoading && headerItems.map((item) => {
+                                const Icon = iconMap[item.iconName || ''] || LayoutGrid;
+                                const href = item.route || '/';
                                 const isActive = href === "/" ? location.pathname === "/" : location.pathname.startsWith(href);
                                 return (
-                                    <Link key={href} to={href}>
+                                    <Link key={item.muid} to={href}>
                                         <div
                                             className="flex flex-col items-center justify-center w-[80px] lg:w-[90px] h-full cursor-pointer hover:bg-gray-300 flex-shrink-0"
                                             style={{
-                                                backgroundColor: isActive ? activeBg : inactiveBg,
+                                                backgroundColor: isActive ? "#5DADE2" : "#f1f1f1",
                                             }}
                                         >
-                                            <Icon size={20} color={isActive ? activeText : "#6B7280"} className="mb-1" />
+                                            <Icon size={20} color={isActive ? "white" : "#6B7280"} className="mb-1" />
                                             <div
                                                 className="text-[9px] lg:text-[10px] font-normal font-['Roboto',Helvetica] text-center"
-                                                style={{ color: isActive ? activeText : inactiveText }}
+                                                style={{ color: isActive ? "white" : "#4f5863" }}
                                             >
-                                                {label}
+                                                {item.displayName}
                                             </div>
                                         </div>
                                     </Link>
@@ -254,24 +255,26 @@ export default function HeaderComponent({
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-0">
-                        {navItems.map(({ label, href, icon: Icon, activeBg, activeText, inactiveBg, inactiveText }) => {
+                        {!isLoading && headerItems.map((item) => {
+                            const Icon = iconMap[item.iconName || ''] || LayoutGrid;
+                            const href = item.route || '/';
                             const isActive = href === "/" ? location.pathname === "/" : location.pathname.startsWith(href);
                             return (
                                 <Link
-                                    key={href}
+                                    key={item.muid}
                                     to={href}
                                     onClick={() => setIsMobileMenuOpen(false)}
                                     className="flex flex-col items-center justify-center h-[60px] border-r border-b border-gray-300 cursor-pointer hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-[#51baf4] focus:ring-inset"
                                     style={{
-                                        backgroundColor: isActive ? activeBg : inactiveBg,
+                                        backgroundColor: isActive ? "#5DADE2" : "#f1f1f1",
                                     }}
                                 >
-                                    <Icon size={20} color={isActive ? activeText : "#6B7280"} className="mb-1" />
+                                    <Icon size={20} color={isActive ? "white" : "#6B7280"} className="mb-1" />
                                     <div
                                         className="text-[8px] font-normal font-['Roboto',Helvetica] text-center px-1"
-                                        style={{ color: isActive ? activeText : inactiveText }}
+                                        style={{ color: isActive ? "white" : "#4f5863" }}
                                     >
-                                        {label}
+                                        {item.displayName}
                                     </div>
                                 </Link>
                             );
