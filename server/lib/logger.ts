@@ -13,7 +13,8 @@ const transport = env.LOG_PRETTY
       options: {
         colorize: true,
         translateTime: 'SYS:standard',
-        ignore: 'pid,hostname',
+        ignore: 'pid,hostname,env,req,res,tenantId,userId,requestId',
+        messageFormat: '{name} {msg}',
       },
     }
   : undefined;

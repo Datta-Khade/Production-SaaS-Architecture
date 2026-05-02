@@ -7,9 +7,10 @@
 import pinoHttp from 'pino-http';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../lib/logger.js';
+import { env } from '../env.js';
 
 export const requestLogger = pinoHttp({
-  logger,
+  logger: logger.child({ name: 'express' }),
   
   // Generate a unique request ID for correlation
   genReqId: (req) => {
@@ -24,18 +25,21 @@ export const requestLogger = pinoHttp({
   }),
 
   // Custom log message format
-  customSuccessMessage: (req, res) => {
-    return `${req.method} ${req.url} → ${res.statusCode}`;
+  customSuccessMessage: (req, res, responseTime) => {
+    return `${req.method} ${req.url} ${res.statusCode} in ${responseTime}ms`;
   },
 
-  customErrorMessage: (req, res) => {
-    return `${req.method} ${req.url} → ${res.statusCode}`;
+  customErrorMessage: (req, res, responseTime) => {
+    return `${req.method} ${req.url} ${res.statusCode} in ${responseTime}ms`;
   },
 
-  // Don't log health check requests (too noisy)
-  autoLogging: {
-    ignore: (req) => req.url === '/api/health',
-  },
+  // Don't log health check requests or Vite noise (too noisy)
+  autoLogging: env.LOG_HTTP_REQUESTS ? {
+    ignore: (req) => {
+      const noisyPaths = ['/api/health', '/@vite/client', '/src/', '/node_modules/'];
+      return noisyPaths.some(path => req.url?.includes(path));
+    },
+  } : false,
 
   // Custom serializers to reduce log size
   serializers: {

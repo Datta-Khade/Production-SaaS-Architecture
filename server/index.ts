@@ -12,6 +12,7 @@
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createServer } from 'node:http';
 import { env } from './env.js';
 import { logger } from './lib/logger.js';
 
@@ -30,7 +31,7 @@ import { getRedis, closeRedis } from './lib/redis.js';
 import { closeAllPools } from './v2/db.js';
 import { runMigrations } from './v2/migrationRunner.js';
 import { createApp } from './app.js';
-import { setupVite, serveStatic } from './vite.js';
+import { setupVite, serveStatic, log } from './vite.js';
 
 const start = async (): Promise<void> => {
   logger.info({ env: env.NODE_ENV, port: env.PORT }, '🚀 Starting production-app server...');
@@ -56,31 +57,36 @@ const start = async (): Promise<void> => {
 
   // 3. Create Express app
   const app = createApp();
-  
-  // 4. Create HTTP server for Vite/WS support
-  const server = app.listen(env.PORT, () => {
-    logger.info({
-      port: env.PORT,
-      url: env.APP_URL,
-      multiTenant: env.MULTI_TENANT,
-      authBypass: env.AUTH_BYPASS,
-    }, `✅ Server running on port ${env.PORT}`);
-  });
+  const server = createServer(app);
 
-  // 5. Setup Frontend (Dev Middleware or Static Serving)
-  if (env.NODE_ENV === 'development') {
+  // 4. Setup Frontend (Dev Middleware or Static Serving)
+  if (app.get("env") === "development") {
     await setupVite(app, server);
-    logger.info('✨ Vite dev middleware enabled');
+    log('✨ Vite dev middleware enabled');
   } else {
     serveStatic(app);
-    logger.info('📁 Serving static frontend from dist/public');
+    log('📁 Serving static frontend from dist/public');
   }
+
+  // 5. Start listening
+  const port = parseInt(process.env.PORT || "5005", 10);
+  const url = process.env.APP_URL;
+  const multiTenant = process.env.MULTI_TENANT;
+  const authBypass = process.env.AUTH_BYPASS;
+
+  const httpServer = server.listen({
+    port,
+    host: "0.0.0.0",
+  }, () => {
+    log(`serving on port ${port}`);
+    log(` Environment variables: ${url} multiTenant: ${multiTenant} authBypass: ${authBypass}`)
+  });
 
   // ─── Graceful Shutdown ──────────────────────────────────────
   const shutdown = async (signal: string): Promise<void> => {
     logger.info({ signal }, `${signal} received — shutting down gracefully...`);
 
-    server.close(async () => {
+    httpServer.close(async () => {
       logger.info('HTTP server closed');
 
       await Promise.allSettled([

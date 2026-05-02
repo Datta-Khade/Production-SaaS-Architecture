@@ -24,8 +24,8 @@ export function ModuleNavigator({ currentModule, onModuleChange }: ModuleNavigat
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <div className="flex flex-col items-center justify-center cursor-pointer select-none">
-          <div className="w-6 h-6 mb-1">
+        <div className="flex flex-col items-center justify-center w-full h-full cursor-pointer select-none">
+          <div className="mb-1">
             <svg
               width="24"
               height="24"
@@ -39,7 +39,7 @@ export function ModuleNavigator({ currentModule, onModuleChange }: ModuleNavigat
             </svg>
           </div>
 
-          <span className="text-[10px] text-gray-600">
+          <span className="text-[10px] font-normal font-['Roboto',Helvetica] text-[#4f5863]">
             {currentModule}
           </span>
         </div>
@@ -52,7 +52,7 @@ export function ModuleNavigator({ currentModule, onModuleChange }: ModuleNavigat
           }}
           className="cursor-pointer"
         >
-          Crewing
+          Module 1
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => {
@@ -61,7 +61,7 @@ export function ModuleNavigator({ currentModule, onModuleChange }: ModuleNavigat
           }}
           className="cursor-pointer"
         >
-          Audit
+          Module 2
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

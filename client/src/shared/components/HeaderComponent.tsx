@@ -11,6 +11,7 @@ import {
     LogOut
 } from "lucide-react";
 import logo from '../../assets/logo.svg';
+import { ModuleNavigator } from './ModuleNavigator';
 
 const navItems = [
     {
@@ -125,6 +126,16 @@ export default function HeaderComponent({
                                 <img src={logo} alt="SAIL Logo" className="h-12 w-auto" />
                             </Link>
                         </div>
+
+                        {/* Module Navigator */}
+                        <div className="hidden lg:flex items-center h-full border-l border-r border-gray-300">
+                            <div className="w-[100px] h-full flex items-center justify-center hover:bg-gray-300 transition-colors">
+                                <ModuleNavigator 
+                                    currentModule="Module 1" 
+                                    onModuleChange={handleModuleChange} 
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <nav className="hidden xl:flex h-[65px] flex-1">
@@ -230,6 +241,18 @@ export default function HeaderComponent({
                     className="md:hidden fixed top-[67px] left-0 right-0 bg-[#f1f1f1] border-b-2 border-[#51baf4] shadow-lg z-[99] max-h-[calc(100vh-67px)] overflow-y-auto" 
                     aria-label="Mobile navigation"
                 >
+                    <div className="p-4 border-b border-gray-300 bg-white">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Switch Module</span>
+                            <ModuleNavigator 
+                                currentModule="Module 1" 
+                                onModuleChange={(id) => {
+                                    handleModuleChange(id);
+                                    setIsMobileMenuOpen(false);
+                                }} 
+                            />
+                        </div>
+                    </div>
                     <div className="grid grid-cols-3 gap-0">
                         {navItems.map(({ label, href, icon: Icon, activeBg, activeText, inactiveBg, inactiveText }) => {
                             const isActive = href === "/" ? location.pathname === "/" : location.pathname.startsWith(href);
