@@ -1,5 +1,5 @@
 # infra/docker-compose.yml
-# Development environment — all services
+# Production-ready environment — all core services (excluding workers)
 
 services:
   # Backend API server
@@ -8,7 +8,7 @@ services:
       context: ..
       dockerfile: infra/docker/Dockerfile.server
     ports:
-      - "3000:3000"
+      - "3009:3009"
     depends_on:
       postgres:
         condition: service_healthy
@@ -16,27 +16,19 @@ services:
         condition: service_healthy
     env_file: ../.env.development
     environment:
-      - MASTER_DATABASE_URL=postgresql://dev:devpassword@postgres:5432/production_master
-      - DATABASE_URL=postgresql://dev:devpassword@postgres:5432/tenant_dev
-      - REDIS_URL=redis://redis:6379
-    volumes:
-      - ../server:/app/server
-      - ../shared:/app/shared
-      - ../migrations:/app/migrations
+      - PORT=3009
+      - NODE_ENV=production
     restart: unless-stopped
 
-  # Frontend dev server
+  # Frontend static serving (Nginx)
   client:
     build:
       context: ..
       dockerfile: infra/docker/Dockerfile.client
     ports:
-      - "5173:5173"
+      - "80:80"
     depends_on:
       - app
-    volumes:
-      - ../client:/app/client
-      - ../shared:/app/shared
     restart: unless-stopped
 
   # PostgreSQL database

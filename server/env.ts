@@ -17,7 +17,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.development') }); // Fal
 const envSchema = z.object({
   // App
   NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
-  PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  PORT: z.coerce.number().int().min(1).max(65535).default(3009),
   APP_URL: z.string().url().default('http://localhost:5005'),
 
   // Database — Master

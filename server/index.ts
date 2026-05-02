@@ -69,8 +69,8 @@ const start = async (): Promise<void> => {
   }
 
   // 5. Start listening
-  const port = parseInt(process.env.PORT || "5005", 10);
-  const url = process.env.APP_URL;
+  const port = env.PORT;
+  const url = env.APP_URL;
   const multiTenant = process.env.MULTI_TENANT;
   const authBypass = process.env.AUTH_BYPASS;
 
