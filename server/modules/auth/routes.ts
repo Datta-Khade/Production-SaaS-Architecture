@@ -21,6 +21,8 @@ const router = Router();
 router.post('/api/v2/auth/login',   asyncHandler(rateLimiter), asyncHandler(authController.login));
 router.post('/api/v2/auth/refresh', asyncHandler(requireTenant), asyncHandler(authController.refresh));
 router.post('/api/v2/auth/logout',  asyncHandler(requireTenant), asyncHandler(authController.logout));
+router.post('/api/v2/auth/forgot-password', asyncHandler(authController.forgotPassword));
+router.post('/api/v2/auth/reset-password',  asyncHandler(authController.resetPassword));
 
 // Protected — require valid JWT
 router.get( '/api/v2/auth/profile',         authenticate, asyncHandler(authController.profile));

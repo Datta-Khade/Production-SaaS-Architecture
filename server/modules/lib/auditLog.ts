@@ -23,6 +23,8 @@ export type AuditAction =
   | 'export'
   | 'permission_change'
   | 'password_change'
+  | 'password_reset_requested'
+  | 'password_reset_completed'
   | 'login_failed'
   | 'account_locked';
 

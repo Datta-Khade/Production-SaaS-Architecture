@@ -55,6 +55,21 @@ export const changePasswordSchema = z.object({
 
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
+export const forgotPasswordSchema = z.object({
+  username: z.string().min(1, 'Username is required'),
+  domain:   z.string().min(1, 'Domain is required'),
+});
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z.object({
+  token:        z.string().min(1, 'Token is required'),
+  domain:       z.string().min(1, 'Domain is required'),
+  new_password: passwordSchema,
+});
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
 // ============================================================
 // Common Query Validators
 // ============================================================

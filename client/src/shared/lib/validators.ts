@@ -5,6 +5,8 @@
 export {
   loginSchema,
   changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
   paginationSchema,
   searchQuerySchema,
   buildResponse,
@@ -14,6 +16,8 @@ export {
 export type {
   LoginInput,
   ChangePasswordInput,
+  ForgotPasswordInput,
+  ResetPasswordInput,
   PaginationInput,
   SearchQueryInput,
   ApiResponse,

@@ -26,6 +26,7 @@ const UITestPage = lazy(() => import('./modules/dev/UITestPage'));
 const UsersPage = lazy(() => import('./modules/admin/pages/UsersPage'));
 const RolesPage = lazy(() => import('./modules/admin/pages/RolesPage'));
 const MenuMasterPage = lazy(() => import('./modules/admin/pages/MenuMasterPage'));
+const ResetPasswordPage = lazy(() => import('./modules/auth/pages/ResetPasswordPage'));
 
 const App: React.FC = () => {
   const [isCheckingAuth, setIsCheckingAuth] = React.useState(true);
@@ -67,6 +68,14 @@ const App: React.FC = () => {
         element={
           <Suspense fallback={<PageSkeleton />}>
             <LoginPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/auth/reset-password"
+        element={
+          <Suspense fallback={<PageSkeleton />}>
+            <ResetPasswordPage />
           </Suspense>
         }
       />

@@ -1,21 +1,18 @@
 /**
- * Login Page — Authentication entry point
- *
- * Form fields per AUTH-1:
- *   - Domain (tenant identifier)
- *   - Username (email or login name)
- *   - Password
- *
- * On success:
- *   - Access token stored in memory
- *   - Tenant domain stored in localStorage
- *   - Redirect to intended destination or /dashboard
+ * Login Page — Authentication entry point with 180° Flip Effect
+ * 
+ * Includes:
+ * - Login View (Front)
+ * - Forgot Password View (Back)
  */
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { loginSchema, type LoginInput } from '../../../shared/lib/validators';
+import { 
+  loginSchema, type LoginInput, 
+  forgotPasswordSchema, type ForgotPasswordInput 
+} from '../../../shared/lib/validators';
 import { setAccessToken, setTenantDomain } from '../../../shared/lib/auth';
 import { getErrorMessage } from '../../../shared/lib/errors';
 import { Button } from '@/shared/components/ui/button';
@@ -41,24 +38,27 @@ interface LoginResponse {
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [error, setError] = useState<string | null>(null);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
 
+  // --- Login Form ---
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
+    register: registerLogin,
+    handleSubmit: handleSubmitLogin,
+    formState: { errors: loginErrors },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: { domain: '', username: '', password: '' },
   });
 
-  const onSubmit = async (data: LoginInput): Promise<void> => {
-    setError(null);
+  const onLoginSubmit = async (data: LoginInput): Promise<void> => {
+    setLoginError(null);
     setIsLoading(true);
-
     try {
       const res = await fetch('/api/v2/auth/login', {
         method: 'POST',
@@ -66,110 +66,183 @@ const LoginPage: React.FC = () => {
         credentials: 'include',
         body: JSON.stringify(data),
       });
-
-      const result: LoginResponse & { message?: string; code?: string } = await res.json();
-
-      if (!res.ok || !result.success) {
-        throw new Error(result.message || 'Login failed');
-      }
-
+      const result: LoginResponse & { message?: string } = await res.json();
+      if (!res.ok || !result.success) throw new Error(result.message || 'Login failed');
       setAccessToken(result.data.accessToken);
       setTenantDomain(data.domain);
-
       navigate(from, { replace: true });
     } catch (err) {
-      setError(getErrorMessage(err));
+      setLoginError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-sm">
+  // --- Forgot Password Form ---
+  const {
+    register: registerForgot,
+    handleSubmit: handleSubmitForgot,
+    formState: { errors: forgotErrors },
+    reset: resetForgot,
+  } = useForm<ForgotPasswordInput>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { domain: '', username: '' },
+  });
 
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <img src={logo} alt="SAIL Logo" className="h-20 w-auto mx-auto mb-6" />
-          {/* <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
-          <p className="text-sm text-gray-500 mt-1">Sign in to your account</p> */}
+  const onForgotSubmit = async (data: ForgotPasswordInput): Promise<void> => {
+    setForgotError(null);
+    setForgotSuccess(null);
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/v2/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success) throw new Error(result.message || 'Failed to send reset link');
+      setForgotSuccess(result.message || 'If an account exists, a reset link has been sent.');
+      resetForgot();
+    } catch (err) {
+      setForgotError(getErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleFlip = () => {
+    setIsFlipped(!isFlipped);
+    setLoginError(null);
+    setForgotError(null);
+    setForgotSuccess(null);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 perspective-1000 overflow-hidden">
+      <div className={`w-full max-w-sm h-[500px] relative flip-card-inner ${isFlipped ? 'flipped' : ''}`}>
+        
+        {/* --- FRONT: Login --- */}
+        <div className="flip-card-front">
+          <form onSubmit={handleSubmitLogin(onLoginSubmit)} className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-6 h-full" noValidate>
+            <div className="text-center mb-2">
+              <img src={logo} alt="SAIL Logo" className="h-20 w-auto mx-auto mb-2" />
+            </div>
+
+            {loginError && (
+              <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg animate-in fade-in slide-in-from-top-1">
+                {loginError}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="login-username">Username</Label>
+              <Input
+                id="login-username"
+                type="text"
+                autoComplete="username"
+                {...registerLogin('username')}
+                className={loginErrors.username ? 'border-red-500 focus-visible:ring-red-500' : ''}
+              />
+              {loginErrors.username && <p className="text-xs text-red-500">{loginErrors.username.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="login-password">Password</Label>
+              <Input
+                id="login-password"
+                type="password"
+                autoComplete="current-password"
+                {...registerLogin('password')}
+                className={loginErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}
+              />
+              <div className="flex justify-end">
+                <button 
+                  type="button" 
+                  onClick={toggleFlip}
+                  className="text-xs text-[#16569e] hover:underline"
+                >
+                  Forgot password?
+                </button>
+              </div>
+              {loginErrors.password && <p className="text-xs text-red-500">{loginErrors.password.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="login-domain">Domain</Label>
+              <Input
+                id="login-domain"
+                type="text"
+                autoComplete="organization"
+                {...registerLogin('domain')}
+                className={loginErrors.domain ? 'border-red-500 focus-visible:ring-red-500' : ''}
+              />
+              {loginErrors.domain && <p className="text-xs text-red-500">{loginErrors.domain.message}</p>}
+            </div>
+
+            <Button type="submit" disabled={isLoading} className="w-full h-11 bg-[#16569e] hover:bg-[#1e5fa8] text-white">
+              {isLoading ? 'Signing in...' : 'Sign in'}
+            </Button>
+          </form>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-6" noValidate>
-
-          {/* Error banner */}
-          {error && (
-            <div
-              id="login-error"
-              className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg animate-in fade-in slide-in-from-top-1"
-            >
-              {error}
+        {/* --- BACK: Forgot Password --- */}
+        <div className="flip-card-back">
+          <form onSubmit={handleSubmitForgot(onForgotSubmit)} className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-6 h-full" noValidate>
+            <div className="text-center mb-2">
+              <img src={logo} alt="SAIL Logo" className="h-20 w-auto mx-auto mb-2" />
+              <h2 className="text-lg font-bold text-gray-900">Forgot Password</h2>
             </div>
-          )}
 
-
-          {/* Username */}
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              type="text"
-              autoComplete="username"
-              {...register('username')}
-              className={errors.username ? 'border-red-500 focus-visible:ring-red-500' : ''}
-            />
-            {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}
-          </div>
-
-          {/* Password */}
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              {...register('password')}
-              className={errors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}
-            />
-            {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
-          </div>
-
-          {/* Domain */}
-          <div className="space-y-2">
-            <Label htmlFor="domain">Domain</Label>
-            <Input
-              id="domain"
-              type="text"
-              autoComplete="organization"
-              {...register('domain')}
-              className={errors.domain ? 'border-red-500 focus-visible:ring-red-500' : ''}
-            />
-            {errors.domain && <p className="text-xs text-red-500">{errors.domain.message}</p>}
-          </div>
-
-          {/* Submit */}
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full h-11 bg-[#16569e] hover:bg-[#1e5fa8] text-white"
-            id="login-submit"
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Signing in...
-              </span>
-            ) : (
-              'Sign in'
+            {forgotError && (
+              <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg animate-in fade-in slide-in-from-top-1">
+                {forgotError}
+              </div>
             )}
-          </Button>
 
+            {forgotSuccess && (
+              <div className="p-3 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg animate-in fade-in slide-in-from-top-1">
+                {forgotSuccess}
+              </div>
+            )}
 
-        </form>
+            <div className="space-y-2">
+              <Label htmlFor="forgot-username">Username</Label>
+              <Input
+                id="forgot-username"
+                type="text"
+                {...registerForgot('username')}
+                className={forgotErrors.username ? 'border-red-500 focus-visible:ring-red-500' : ''}
+              />
+              {forgotErrors.username && <p className="text-xs text-red-500">{forgotErrors.username.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="forgot-domain">Domain</Label>
+              <Input
+                id="forgot-domain"
+                type="text"
+                {...registerForgot('domain')}
+                className={forgotErrors.domain ? 'border-red-500 focus-visible:ring-red-500' : ''}
+              />
+              {forgotErrors.domain && <p className="text-xs text-red-500">{forgotErrors.domain.message}</p>}
+            </div>
+
+            <Button type="submit" disabled={isLoading || !!forgotSuccess} className="w-full h-11 bg-[#16569e] hover:bg-[#1e5fa8] text-white">
+              {isLoading ? 'Sending...' : 'Send Reset Link'}
+            </Button>
+
+            <div className="text-center">
+              <button 
+                type="button" 
+                onClick={toggleFlip}
+                className="text-sm font-medium text-[#16569e] hover:underline"
+              >
+                Back to Sign in
+              </button>
+            </div>
+          </form>
+        </div>
+
       </div>
     </div>
   );

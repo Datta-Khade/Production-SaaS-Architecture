@@ -20,6 +20,8 @@ import { logger } from '../../lib/logger.js';
 import { getRawPool, runWithDb } from '../db.js';
 import { auditLog } from '../lib/auditLog.js';
 import { getTenantByDomain } from '../tenantConnectionManager.js';
+import { emailService } from '../../lib/email.js';
+import crypto from 'node:crypto';
 
 const MAX_FAILED_ATTEMPTS = 10;
 const LOCK_DURATION_MINUTES = 30;
@@ -49,7 +51,7 @@ interface DbUser {
 const generateTokens = (claims: Omit<JwtPayload, 'iat' | 'exp'>): TokenPair => {
   const accessToken = jwt.sign(claims, env.JWT_SECRET as string, {
     expiresIn: env.JWT_EXPIRY as any,
-    issuer:   'production.so',
+    issuer: 'production.so',
     audience: 'production.so',
   });
 
@@ -80,8 +82,8 @@ export const authService = {
 
     const tenantConn = await getTenantByDomain(_domain);
     if (!tenantConn) {
-       // Do not reveal if tenant doesn't exist, just return invalid creds
-       throw new UnauthorizedError('Invalid credentials');
+      // Do not reveal if tenant doesn't exist, just return invalid creds
+      throw new UnauthorizedError('Invalid credentials');
     }
 
     return runWithDb(tenantConn.dbUrl, async () => {
@@ -89,130 +91,130 @@ export const authService = {
 
       // Look up user by username OR email
       const result = await db.query<DbUser>(
-      `SELECT uuid, email, username, password_hash, role, assigned_role, first_name, last_name,
+        `SELECT uuid, email, username, password_hash, role, assigned_role, first_name, last_name,
               is_active, failed_login_count, locked_until
        FROM users_v2
        WHERE (username = $1 OR email = $1)
          AND is_deleted = false
        LIMIT 1`,
-      [username]
-    );
-
-    const user = result.rows[0];
-
-    // Generic error — don't reveal if user exists
-    const invalidCredentials = (): never => {
-      throw new UnauthorizedError('Invalid credentials');
-    };
-
-    if (!user) {
-      await auditLog.track({
-        actor: null,
-        action: 'login_failed',
-        entity: 'users_v2',
-        after: { username, reason: 'user_not_found' },
-        ipAddress,
-      });
-      return invalidCredentials();
-    }
-
-    // Check account locked
-    if (user.locked_until && new Date() < new Date(user.locked_until)) {
-      const minutesLeft = Math.ceil(
-        (new Date(user.locked_until).getTime() - Date.now()) / 60000
+        [username]
       );
-      await auditLog.track({
-        actor: { sub: user.uuid, email: user.email },
-        action: 'login_failed',
-        entity: 'users_v2',
-        entityUuid: user.uuid,
-        after: { reason: 'account_locked', minutesLeft },
-        ipAddress,
-      });
-      throw new ForbiddenError(
-        `Account locked due to too many failed attempts. Try again in ${minutesLeft} minutes.`
-      );
-    }
 
-    // Check account active
-    if (!user.is_active) {
-      throw new ForbiddenError('Account is disabled. Contact your administrator.');
-    }
+      const user = result.rows[0];
 
-    // Verify password
-    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+      // Generic error — don't reveal if user exists
+      const invalidCredentials = (): never => {
+        throw new UnauthorizedError('Invalid credentials');
+      };
 
-    if (!passwordMatch) {
-      const newFailCount = user.failed_login_count + 1;
-      const shouldLock = newFailCount >= MAX_FAILED_ATTEMPTS;
+      if (!user) {
+        await auditLog.track({
+          actor: null,
+          action: 'login_failed',
+          entity: 'users_v2',
+          after: { username, reason: 'user_not_found' },
+          ipAddress,
+        });
+        return invalidCredentials();
+      }
 
-      await db.query(
-        `UPDATE users_v2
+      // Check account locked
+      if (user.locked_until && new Date() < new Date(user.locked_until)) {
+        const minutesLeft = Math.ceil(
+          (new Date(user.locked_until).getTime() - Date.now()) / 60000
+        );
+        await auditLog.track({
+          actor: { sub: user.uuid, email: user.email },
+          action: 'login_failed',
+          entity: 'users_v2',
+          entityUuid: user.uuid,
+          after: { reason: 'account_locked', minutesLeft },
+          ipAddress,
+        });
+        throw new ForbiddenError(
+          `Account locked due to too many failed attempts. Try again in ${minutesLeft} minutes.`
+        );
+      }
+
+      // Check account active
+      if (!user.is_active) {
+        throw new ForbiddenError('Account is disabled. Contact your administrator.');
+      }
+
+      // Verify password
+      const passwordMatch = await bcrypt.compare(password, user.password_hash);
+
+      if (!passwordMatch) {
+        const newFailCount = user.failed_login_count + 1;
+        const shouldLock = newFailCount >= MAX_FAILED_ATTEMPTS;
+
+        await db.query(
+          `UPDATE users_v2
          SET failed_login_count = $1,
              locked_until = $2,
              updated_at = NOW()
          WHERE uuid = $3`,
-        [
-          newFailCount,
-          shouldLock ? new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000) : null,
-          user.uuid,
-        ]
-      );
+          [
+            newFailCount,
+            shouldLock ? new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000) : null,
+            user.uuid,
+          ]
+        );
 
-      await auditLog.track({
-        actor: { sub: user.uuid, email: user.email },
-        action: shouldLock ? 'account_locked' : 'login_failed',
-        entity: 'users_v2',
-        entityUuid: user.uuid,
-        after: { attempt: newFailCount, locked: shouldLock },
-        ipAddress,
-      });
+        await auditLog.track({
+          actor: { sub: user.uuid, email: user.email },
+          action: shouldLock ? 'account_locked' : 'login_failed',
+          entity: 'users_v2',
+          entityUuid: user.uuid,
+          after: { attempt: newFailCount, locked: shouldLock },
+          ipAddress,
+        });
 
-      if (shouldLock) {
-        throw new ForbiddenError(
-          `Account locked after ${MAX_FAILED_ATTEMPTS} failed attempts. Try again in ${LOCK_DURATION_MINUTES} minutes.`
+        if (shouldLock) {
+          throw new ForbiddenError(
+            `Account locked after ${MAX_FAILED_ATTEMPTS} failed attempts. Try again in ${LOCK_DURATION_MINUTES} minutes.`
+          );
+        }
+
+        const attemptsLeft = MAX_FAILED_ATTEMPTS - newFailCount;
+        throw new UnauthorizedError(
+          `Invalid credentials. ${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining before lock.`
         );
       }
 
-      const attemptsLeft = MAX_FAILED_ATTEMPTS - newFailCount;
-      throw new UnauthorizedError(
-        `Invalid credentials. ${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining before lock.`
-      );
-    }
-
-    // ✅ Password correct — reset failure counter
-    await db.query(
-      `UPDATE users_v2
+      // ✅ Password correct — reset failure counter
+      await db.query(
+        `UPDATE users_v2
        SET failed_login_count = 0, locked_until = NULL, updated_at = NOW()
        WHERE uuid = $1`,
-      [user.uuid]
-    );
+        [user.uuid]
+      );
 
-    // Generate tokens
-    const { accessToken, refreshToken } = generateTokens({
-      sub:    user.uuid,
-      email:  user.email,
-      role:   user.assigned_role || user.role, // Fallback to legacy role if assigned_role is null
-      domain: _domain,
-    });
+      // Generate tokens
+      const { accessToken, refreshToken } = generateTokens({
+        sub: user.uuid,
+        email: user.email,
+        role: user.assigned_role || user.role, // Fallback to legacy role if assigned_role is null
+        domain: _domain,
+      });
 
-    // Store refresh token hash in DB
-    const tokenHash = hashToken(refreshToken);
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-    await db.query(
-      `INSERT INTO refresh_tokens_v2 (user_uuid, token_hash, ip_address, expires_at)
+      // Store refresh token hash in DB
+      const tokenHash = hashToken(refreshToken);
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      await db.query(
+        `INSERT INTO refresh_tokens_v2 (user_uuid, token_hash, ip_address, expires_at)
        VALUES ($1, $2, $3, $4)`,
-      [user.uuid, tokenHash, ipAddress ?? null, expiresAt]
-    );
+        [user.uuid, tokenHash, ipAddress ?? null, expiresAt]
+      );
 
-    // Audit successful login
-    await auditLog.track({
-      actor: { sub: user.uuid, email: user.email },
-      action: 'login',
-      entity: 'users_v2',
-      entityUuid: user.uuid,
-      ipAddress,
-    });
+      // Audit successful login
+      await auditLog.track({
+        actor: { sub: user.uuid, email: user.email },
+        action: 'login',
+        entity: 'users_v2',
+        entityUuid: user.uuid,
+        ipAddress,
+      });
 
       logger.info({ userUuid: user.uuid, email: user.email }, 'User logged in');
 
@@ -269,9 +271,9 @@ export const authService = {
 
     // Generate new pair
     const { accessToken, refreshToken: newRefreshToken } = generateTokens({
-      sub:    tokenRow.user_uuid,
-      email:  tokenRow.email,
-      role:   tokenRow.assigned_role || tokenRow.role,
+      sub: tokenRow.user_uuid,
+      email: tokenRow.email,
+      role: tokenRow.assigned_role || tokenRow.role,
       domain: 'localhost',
     });
 
@@ -370,6 +372,105 @@ export const authService = {
    */
   hashPassword: async (password: string): Promise<string> => {
     return bcrypt.hash(password, 12);
+  },
+
+  /**
+   * Forgot Password — Generate reset token and send email
+   */
+  forgotPassword: async (username: string, domain: string): Promise<void> => {
+    const tenantConn = await getTenantByDomain(domain);
+    if (!tenantConn) throw new ValidationError('Invalid domain');
+    await runWithDb(tenantConn.dbUrl, async () => {
+      const db = getRawPool();
+
+      // 1. Find user by username OR email
+      const result = await db.query<{ uuid: string; email: string; is_active: boolean }>(
+        'SELECT uuid, email, is_active FROM users_v2 WHERE (username = $1 OR email = $1) AND is_deleted = false LIMIT 1',
+        [username]
+      );
+
+      const user = result.rows[0];
+      if (!user) {
+        // Return success even if user not found (security: don't reveal existence)
+        logger.info({ username, domain }, 'Forgot password: user not found');
+        return;
+      }
+
+      if (!user.is_active) throw new ForbiddenError('Account is disabled');
+
+      // 2. Generate secure token
+      const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = hashToken(token);
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      // 3. Store hashed token in DB
+      await db.query(
+        'INSERT INTO password_reset_tokens (user_uuid, token_hash, expires_at) VALUES ($1, $2, $3)',
+        [user.uuid, tokenHash, expiresAt]
+      );
+
+      // 4. Send email
+      const resetLink = `${env.APP_URL}/auth/reset-password?token=${token}&domain=${domain}`;
+      await emailService.sendPasswordReset(user.email, resetLink);
+
+      await auditLog.track({
+        actor: { sub: user.uuid, email: user.email },
+        action: 'password_reset_requested',
+        entity: 'users_v2',
+        entityUuid: user.uuid,
+      });
+    });
+  },
+
+  /**
+   * Reset Password — Validate token and update password
+   */
+  resetPassword: async (token: string, domain: string, newPassword: string): Promise<void> => {
+    const tenantConn = await getTenantByDomain(domain);
+    if (!tenantConn) throw new ValidationError('Invalid domain');
+
+    await runWithDb(tenantConn.dbUrl, async () => {
+      const db = getRawPool();
+      const tokenHash = hashToken(token);
+
+      // 1. Find valid token
+      const result = await db.query<{ uuid: string; user_uuid: string; expires_at: Date }>(
+        `SELECT uuid, user_uuid, expires_at 
+         FROM password_reset_tokens 
+         WHERE token_hash = $1 AND is_used = false AND expires_at > NOW()
+         LIMIT 1`,
+        [tokenHash]
+      );
+
+      const tokenRow = result.rows[0];
+      if (!tokenRow) throw new ValidationError('Invalid or expired reset token');
+
+      // 2. Update user password
+      const passwordHash = await bcrypt.hash(newPassword, 12);
+      await db.query(
+        'UPDATE users_v2 SET password_hash = $1, failed_login_count = 0, locked_until = NULL, updated_at = NOW() WHERE uuid = $2',
+        [passwordHash, tokenRow.user_uuid]
+      );
+
+      // 3. Mark token as used
+      await db.query(
+        'UPDATE password_reset_tokens SET is_used = true, updated_at = NOW() WHERE uuid = $1',
+        [tokenRow.uuid]
+      );
+
+      // 4. Revoke all active refresh tokens (security)
+      await db.query(
+        'UPDATE refresh_tokens_v2 SET is_revoked = true, updated_at = NOW() WHERE user_uuid = $1',
+        [tokenRow.user_uuid]
+      );
+
+      await auditLog.track({
+        actor: { sub: tokenRow.user_uuid, email: 'unknown' }, // We could look it up if needed
+        action: 'password_reset_completed',
+        entity: 'users_v2',
+        entityUuid: tokenRow.user_uuid,
+      });
+    });
   },
 };
 

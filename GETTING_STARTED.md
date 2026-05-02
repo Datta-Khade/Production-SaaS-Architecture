@@ -90,8 +90,22 @@ The `db:seed` script creates the following test account for the `dev.localhost` 
 -   **Username**: `admin@dev.localhost`
 -   **Password**: `Admin@1234`
 
-> [!NOTE]
-> If you cannot access the site via `dev.localhost`, you may need to add `127.0.0.1 dev.localhost` to your system's `hosts` file.
+---
+
+## 6. Email Configuration (Optional)
+
+To enable email functionality (like Password Reset) during development, we recommend using **Mailtrap**:
+
+1.  Log in to **[Mailtrap](https://mailtrap.io/)**.
+2.  Go to **Email Testing** > **Inboxes** > **My Inbox**.
+3.  Click the **SMTP Settings** tab.
+4.  Copy the **Username** and **Password**.
+5.  Update your `.env.development`:
+    ```env
+    SMTP_USER=your_mailtrap_username
+    SMTP_PASS=your_mailtrap_password
+    ```
+6.  Restart the server (`npm run dev`).
 
 ---
 

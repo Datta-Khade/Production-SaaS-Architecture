@@ -8,7 +8,7 @@
  * POST /api/v2/auth/logout          → Clear refresh token cookie
  */
 import { Request, Response } from 'express';
-import { loginSchema, changePasswordSchema } from '../../../shared/modules/validators/common.js';
+import { loginSchema, changePasswordSchema, forgotPasswordSchema, resetPasswordSchema } from '../../../shared/modules/validators/common.js';
 import { ValidationError } from '../../../shared/modules/errors/index.js';
 import { authService } from './service.js';
 import { env } from '../../env.js';
@@ -135,6 +135,48 @@ export const authController = {
     });
 
     res.json({ success: true, data: null, message: 'Logged out successfully' });
+  },
+
+  /**
+   * POST /api/v2/auth/forgot-password
+   * Body: { email, domain }
+   */
+  forgotPassword: async (req: Request, res: Response): Promise<void> => {
+    const parsed = forgotPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.errors[0]?.message || 'Invalid input');
+    }
+
+    await authService.forgotPassword(parsed.data.username, parsed.data.domain);
+
+    res.json({
+      success: true,
+      data: null,
+      message: 'If an account exists for that email, a reset link has been sent.',
+    });
+  },
+
+  /**
+   * POST /api/v2/auth/reset-password
+   * Body: { token, domain, new_password }
+   */
+  resetPassword: async (req: Request, res: Response): Promise<void> => {
+    const parsed = resetPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.errors[0]?.message || 'Invalid input');
+    }
+
+    await authService.resetPassword(
+      parsed.data.token,
+      parsed.data.domain,
+      parsed.data.new_password
+    );
+
+    res.json({
+      success: true,
+      data: null,
+      message: 'Password has been reset successfully. You can now log in.',
+    });
   },
 };
 
