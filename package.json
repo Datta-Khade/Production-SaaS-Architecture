@@ -14,7 +14,7 @@
     "start": "cross-env NODE_ENV=production node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:migrate": "tsx server/v2/migrationRunner.ts",
+    "db:migrate": "tsx server/modules/migrationRunner.ts",
     "db:seed": "tsx scripts/seed.ts",
     "tenant:create": "tsx scripts/createTenant.ts",
     "lint": "tsc --noEmit",
