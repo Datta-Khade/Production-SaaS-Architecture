@@ -92,6 +92,13 @@ export const accessControlService = {
   },
 
   /**
+   * Get all roles from Master DB
+   */
+  async getAllRoles() {
+    return accessControlRepository.getAllRoles();
+  },
+
+  /**
    * Create a new menu and automatically grant access to the creator's role
    */
   async createMenu(data: any, currentRoleName: string) {

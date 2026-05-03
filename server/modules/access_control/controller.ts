@@ -48,6 +48,19 @@ export const accessControlController = {
   },
 
   /**
+   * GET /api/v2/admin/roles
+   */
+  async getAllRoles(_req: Request, res: Response) {
+    try {
+      const roles = await accessControlService.getAllRoles();
+      return res.json({ success: true, data: roles });
+    } catch (err) {
+      logger.error({ error: (err as Error).message }, 'Failed to fetch all roles');
+      return res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+  },
+
+  /**
    * POST /api/v2/admin/menus
    */
   async createMenu(req: Request, res: Response) {

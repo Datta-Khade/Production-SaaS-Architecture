@@ -22,8 +22,13 @@ router.get(
 router.get(
   '/api/v2/admin/menus',
   authenticate,
-  requireRole('superadmin'),
   asyncHandler(accessControlController.getAllMenus)
+);
+
+router.get(
+  '/api/v2/admin/roles',
+  authenticate,
+  asyncHandler(accessControlController.getAllRoles)
 );
 
 router.post(
