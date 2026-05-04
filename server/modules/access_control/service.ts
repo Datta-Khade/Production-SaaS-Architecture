@@ -112,22 +112,7 @@ export const accessControlService = {
       ...cleanData,
       muid,
     });
-    const newMenu = results[0];
-
-    // 2. Automatically grant access to the creator's role in the Tenant DB
-    try {
-      const role = await accessControlRepository.getRoleByName(currentRoleName);
-      if (role) {
-        await accessControlRepository.grantMenuPermission(role.ruid, muid);
-        logger.info({ muid, roleName: currentRoleName }, '✅ Granted initial permission to creator role');
-      }
-    } catch (permErr) {
-      logger.error({ error: (permErr as Error).message, muid }, '⚠️ Failed to grant initial permission to creator role');
-      // We don't fail the whole request if permission fails, 
-      // but the user might not see the menu immediately.
-    }
-
-    return newMenu;
+    return results[0];
   },
 
   /**
@@ -144,5 +129,23 @@ export const accessControlService = {
    */
   async deleteMenu(muid: string) {
     return accessControlRepository.deleteMenu(muid);
+  },
+
+  /**
+   * Get all permissions for a specific role
+   */
+  async getRolePermissions(roleUuid: string) {
+    return accessControlRepository.getRolePermissions(roleUuid);
+  },
+
+  /**
+   * Bulk save/sync permissions for a role
+   */
+  async saveRolePermissions(roleUuid: string, permissions: any[]) {
+    // 1. Get existing permissions to track changes for audit
+    const existing = await accessControlRepository.getRolePermissions(roleUuid);
+
+    // 2. Perform bulk update in a transaction
+    return accessControlRepository.syncRolePermissions(roleUuid, permissions);
   }
 };

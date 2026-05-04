@@ -160,5 +160,66 @@ export const accessControlRepository = {
         sort_order: 1
       })
       .returning();
+  },
+
+  /**
+   * Sync permissions for a role (Bulk Upsert)
+   */
+  async syncRolePermissions(roleUuid: string, permissions: any[]) {
+    const db = getDb();
+    
+    const results = [];
+    for (const perm of permissions) {
+      // 1. Sanitize incoming data
+      const { id, rauid: _rauid, created_at, updated_at, ...cleanPerm } = perm;
+
+      // 2. Try to find an existing record for this role + menu combination
+      const existing = await db
+        .select()
+        .from(roleAccessTable)
+        .where(
+          and(
+            eq(roleAccessTable.role_uuid, roleUuid),
+            eq(roleAccessTable.menu_uuid, cleanPerm.menu_uuid),
+            eq(roleAccessTable.is_deleted, false)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        // Update ALL existing records for this role + menu combination to ensure consistency
+        const res = await db
+          .update(roleAccessTable)
+          .set({
+            canview: cleanPerm.canview,
+            cancreate: cleanPerm.cancreate,
+            canedit: cleanPerm.canedit,
+            candelete: cleanPerm.candelete,
+            updated_at: new Date(),
+          })
+          .where(
+            and(
+              eq(roleAccessTable.role_uuid, roleUuid),
+              eq(roleAccessTable.menu_uuid, cleanPerm.menu_uuid)
+            )
+          )
+          .returning();
+        results.push(res[0]);
+      } else {
+        // Insert new record
+        const rauid = `acc-${Math.random().toString(36).substring(2, 9)}`;
+        const res = await db
+          .insert(roleAccessTable)
+          .values({
+            ...cleanPerm,
+            rauid,
+            role_uuid: roleUuid,
+            updated_at: new Date(),
+          })
+          .returning();
+        results.push(res[0]);
+      }
+    }
+    return results;
   }
 };

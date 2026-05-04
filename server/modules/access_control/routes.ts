@@ -50,9 +50,25 @@ router.patch(
 router.delete(
   '/api/v2/admin/menus/:muid',
   authenticate,
-  requireRole('superadmin'),
   asyncHandler(requireTenant),
   asyncHandler(accessControlController.deleteMenu)
+);
+
+/**
+ * Admin: Role Permission Management
+ */
+router.get(
+  '/api/v2/admin/permissions/:roleUuid',
+  authenticate,
+  asyncHandler(requireTenant),
+  asyncHandler(accessControlController.getRolePermissions)
+);
+
+router.post(
+  '/api/v2/admin/permissions/:roleUuid',
+  authenticate,
+  asyncHandler(requireTenant),
+  asyncHandler(accessControlController.saveRolePermissions)
 );
 
 export default router;

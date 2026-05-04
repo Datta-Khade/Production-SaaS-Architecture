@@ -103,5 +103,33 @@ export const accessControlController = {
       logger.error({ error: (err as Error).message, muid: req.params.muid }, 'Failed to delete menu');
       return res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
+  },
+
+  /**
+   * GET /api/v2/admin/permissions/:roleUuid
+   */
+  async getRolePermissions(req: Request, res: Response) {
+    try {
+      const { roleUuid } = req.params;
+      const permissions = await accessControlService.getRolePermissions(roleUuid);
+      return res.json({ success: true, data: permissions });
+    } catch (err) {
+      logger.error({ error: (err as Error).message, roleUuid: req.params.roleUuid }, 'Failed to fetch role permissions');
+      return res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+  },
+
+  /**
+   * POST /api/v2/admin/permissions/:roleUuid
+   */
+  async saveRolePermissions(req: Request, res: Response) {
+    try {
+      const { roleUuid } = req.params;
+      const permissions = await accessControlService.saveRolePermissions(roleUuid, req.body);
+      return res.json({ success: true, data: permissions });
+    } catch (err) {
+      logger.error({ error: (err as Error).message, roleUuid: req.params.roleUuid }, 'Failed to save role permissions');
+      return res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
   }
 };

@@ -26,6 +26,7 @@ const UITestPage = lazy(() => import('./modules/dev/UITestPage'));
 const UsersPage = lazy(() => import('./modules/admin/pages/UsersPage'));
 const RolesPage = lazy(() => import('./modules/admin/pages/RolesPage'));
 const MenuMasterPage = lazy(() => import('./modules/admin/pages/MenuMasterPage'));
+const AccessControlPage = lazy(() => import('./modules/admin/pages/AccessControlPage'));
 const ResetPasswordPage = lazy(() => import('./modules/auth/pages/ResetPasswordPage'));
 
 const App: React.FC = () => {
@@ -145,6 +146,16 @@ const App: React.FC = () => {
             <ModuleErrorBoundary moduleName="Admin/Menus">
               <Suspense fallback={<PageSkeleton />}>
                 <MenuMasterPage />
+              </Suspense>
+            </ModuleErrorBoundary>
+          }
+        />
+        <Route
+          path="/admin/access-control"
+          element={
+            <ModuleErrorBoundary moduleName="Admin/AccessControl">
+              <Suspense fallback={<PageSkeleton />}>
+                <AccessControlPage />
               </Suspense>
             </ModuleErrorBoundary>
           }
