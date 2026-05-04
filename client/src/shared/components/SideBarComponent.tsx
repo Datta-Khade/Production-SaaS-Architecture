@@ -15,6 +15,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useViewport, getLayoutConfig } from '@/shared/hooks/useViewport';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/components/ui/tooltip';
 import { useNavigation } from '../hooks/useNavigation';
+import { DynamicIcon } from './DynamicIcon';
 
 /**
  * Map of icon names (from DB) to Lucide components
@@ -76,7 +77,6 @@ export default function SideBarComponent({
                 style={{ width: `${sidebarWidth}px` }}
             >
                 {!isLoading && sidebarItems.map(item => {
-                    const Icon = iconMap[item.iconName || ''] || LayoutGrid;
                     const isActive = location.pathname === item.route;
 
                     return (
@@ -91,7 +91,7 @@ export default function SideBarComponent({
                                 >
                                     <div className="text-white text-[10px] font-normal font-['Roboto',Helvetica] flex flex-col items-center justify-center text-center">
                                         <div className={isCompact ? '' : 'mb-1'}>
-                                            <Icon size={20} className='text-white' />
+                                            <DynamicIcon name={item.iconName} size={20} className='text-white' />
                                         </div>
                                         {!isCompact && (
                                             <div className="leading-tight break-words hyphens-auto max-w-full">

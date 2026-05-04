@@ -15,6 +15,8 @@ import {
     Search
 } from 'lucide-react';
 import { useToast } from '@/shared/hooks/use-toast';
+import { IconPicker } from '@/shared/components/IconPicker';
+import { DynamicIcon } from '@/shared/components/DynamicIcon';
 
 interface Menu {
     muid: string;
@@ -171,7 +173,7 @@ const MenuMasterPage: React.FC = () => {
                                     <div className={`p-4 grid grid-cols-12 gap-4 items-center hover:bg-gray-50 ${editingMuid === header.muid ? 'bg-blue-50' : ''}`}>
                                         <div className="col-span-6 flex items-center gap-3">
                                             <div className="p-2 bg-blue-100 text-blue-600 rounded">
-                                                <LayoutGrid className="w-4 h-4" />
+                                                <DynamicIcon name={header.icon_name} className="w-4 h-4" />
                                             </div>
                                             <div>
                                                 <div className="font-semibold text-gray-900">{header.display_name}</div>
@@ -266,11 +268,10 @@ const MenuMasterPage: React.FC = () => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label>Icon Name</Label>
-                                        <Input 
+                                        <Label>Icon</Label>
+                                        <IconPicker 
                                             value={formData.icon_name || ''} 
-                                            onChange={(e) => setFormData({...formData, icon_name: e.target.value})}
-                                            placeholder="LayoutGrid"
+                                            onChange={(val) => setFormData({...formData, icon_name: val})}
                                         />
                                     </div>
                                     <div className="space-y-2">

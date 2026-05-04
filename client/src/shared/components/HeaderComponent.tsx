@@ -20,6 +20,7 @@ import {
 import logo from '../../assets/logo.svg';
 import { ModuleNavigator } from './ModuleNavigator';
 import { useNavigation } from '../hooks/useNavigation';
+import { DynamicIcon } from './DynamicIcon';
 
 /**
  * Map of icon names (from DB) to Lucide components
@@ -143,7 +144,6 @@ export default function HeaderComponent({
                     <nav className="hidden xl:flex h-[65px] flex-1">
                         <div className="flex h-full">
                             {!isLoading && headerItems.map((item) => {
-                                const Icon = iconMap[item.iconName || ''] || LayoutGrid;
                                 const href = item.route || '/';
                                 const isActive = href === "/" ? location.pathname === "/" : location.pathname.startsWith(href);
                                 return (
@@ -154,7 +154,7 @@ export default function HeaderComponent({
                                                 backgroundColor: isActive ? "#5DADE2" : "#f1f1f1",
                                             }}
                                         >
-                                            <Icon size={24} color={isActive ? "white" : "#6B7280"} className="mb-1" />
+                                            <DynamicIcon name={item.iconName} size={24} color={isActive ? "white" : "#6B7280"} className="mb-1" />
                                             <div
                                                 className="text-[10px] font-normal font-['Roboto',Helvetica]"
                                                 style={{ color: isActive ? "white" : "#4f5863" }}
@@ -171,7 +171,6 @@ export default function HeaderComponent({
                     <nav className="hidden md:flex xl:hidden h-[65px] flex-1 overflow-x-auto overflow-y-hidden">
                         <div className="flex h-full min-w-max">
                             {!isLoading && headerItems.map((item) => {
-                                const Icon = iconMap[item.iconName || ''] || LayoutGrid;
                                 const href = item.route || '/';
                                 const isActive = href === "/" ? location.pathname === "/" : location.pathname.startsWith(href);
                                 return (
@@ -182,7 +181,7 @@ export default function HeaderComponent({
                                                 backgroundColor: isActive ? "#5DADE2" : "#f1f1f1",
                                             }}
                                         >
-                                            <Icon size={20} color={isActive ? "white" : "#6B7280"} className="mb-1" />
+                                            <DynamicIcon name={item.iconName} size={20} color={isActive ? "white" : "#6B7280"} className="mb-1" />
                                             <div
                                                 className="text-[9px] lg:text-[10px] font-normal font-['Roboto',Helvetica] text-center"
                                                 style={{ color: isActive ? "white" : "#4f5863" }}
