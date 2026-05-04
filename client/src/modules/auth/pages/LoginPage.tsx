@@ -117,15 +117,18 @@ const LoginPage: React.FC = () => {
     setForgotSuccess(null);
   };
 
+  const hasError = loginError || Object.keys(loginErrors).length > 0 || forgotError || Object.keys(forgotErrors).length > 0;
+  const cardHeight = hasError ? 'h-[560px]' : 'h-[500px]';
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 perspective-1000 overflow-hidden">
-      <div className={`w-full max-w-sm h-[500px] relative flip-card-inner ${isFlipped ? 'flipped' : ''}`}>
+      <div className={`w-full max-w-sm ${cardHeight} transition-all duration-300 relative flip-card-inner ${isFlipped ? 'flipped' : ''}`}>
         
         {/* --- FRONT: Login --- */}
         <div className="flip-card-front">
-          <form onSubmit={handleSubmitLogin(onLoginSubmit)} className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-6 h-full" noValidate>
-            <div className="text-center mb-2">
-              <img src={logo} alt="SAIL Logo" className="h-20 w-auto mx-auto mb-2" />
+          <form onSubmit={handleSubmitLogin(onLoginSubmit)} className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-4 h-full" noValidate>
+            <div className="text-center mb-1">
+              <img src={logo} alt="SAIL Logo" className="h-16 w-auto mx-auto mb-1" />
             </div>
 
             {loginError && (
@@ -187,9 +190,9 @@ const LoginPage: React.FC = () => {
 
         {/* --- BACK: Forgot Password --- */}
         <div className="flip-card-back">
-          <form onSubmit={handleSubmitForgot(onForgotSubmit)} className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-6 h-full" noValidate>
-            <div className="text-center mb-2">
-              <img src={logo} alt="SAIL Logo" className="h-20 w-auto mx-auto mb-2" />
+          <form onSubmit={handleSubmitForgot(onForgotSubmit)} className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-4 h-full" noValidate>
+            <div className="text-center mb-1">
+              <img src={logo} alt="SAIL Logo" className="h-16 w-auto mx-auto mb-1" />
               <h2 className="text-lg font-bold text-gray-900">Forgot Password</h2>
             </div>
 

@@ -14,11 +14,24 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    env_file: ../.env.development
+    env_file: ../.env.docker
     environment:
       - PORT=3009
       - NODE_ENV=production
     restart: unless-stopped
+
+  # Background Worker (Email processing) - Disabled for now
+  # worker:
+  #   build:
+  #     context: ..
+  #     dockerfile: infra/docker/Dockerfile.worker
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   env_file: ../.env.docker
+  #   environment:
+  #     - NODE_ENV=production
+  #   restart: unless-stopped
 
   # Frontend static serving (Nginx)
   client:
@@ -40,11 +53,11 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     environment:
-      POSTGRES_DB: production_master
-      POSTGRES_USER: dev
-      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: master_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: sailadmin
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dev -d production_master"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d master_db"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -75,9 +88,9 @@ services:
     environment:
       DATABASES_HOST: postgres
       DATABASES_PORT: 5432
-      DATABASES_USER: dev
-      DATABASES_PASSWORD: devpassword
-      DATABASES_DBNAME: production_master
+      DATABASES_USER: postgres
+      DATABASES_PASSWORD: sailadmin
+      DATABASES_DBNAME: master_db
       PGBOUNCER_POOL_MODE: transaction
       PGBOUNCER_MAX_CLIENT_CONN: 100
       PGBOUNCER_DEFAULT_POOL_SIZE: 20

@@ -4,5 +4,6 @@
 
 INSERT INTO menumaster (muid, name, display_name, route, parent_menu, is_active, sort_order, icon_name, position)
 VALUES 
-  ('menu-adm-menus', 'Menu Management', 'Menus', '/admin/menus', 'menu-adm-001', true, 3, 'Menu', 'sidebar')
+  ('menu-adm-menus', 'Menu Management', 'Menus', '/admin/menus', 'menu-adm-001', true, 3, 'Menu', 'sidebar'),
+  ('menu-adm-access', 'Access Control', 'Access Control', '/admin/access-control', 'menu-adm-001', true, 4, 'Key', 'sidebar')
 ON CONFLICT (muid) DO NOTHING;
