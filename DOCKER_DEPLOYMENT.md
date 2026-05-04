@@ -55,6 +55,23 @@ The first time you run the stack, the `master_db` and `tenant_db` databases will
 | **PgBouncer** | 6432 | 6432 | Connection Pooler |
 | **Redis** | 6379 | 6379 | Cache & Queue |
 
+## Database Access
+
+To inspect the databases directly from your terminal:
+
+```bash
+# Connect to master_db
+docker compose -f infra/docker-compose.yml exec postgres psql -U postgres -d master_db
+
+# Connect to tenant_db
+docker compose -f infra/docker-compose.yml exec postgres psql -U postgres -d tenant_db
+```
+
+Useful `psql` commands:
+- `\dt` : List all tables
+- `\d <table>` : Show table schema
+- `\q` : Exit psql
+
 ## Troubleshooting
 
 ### Check Logs
