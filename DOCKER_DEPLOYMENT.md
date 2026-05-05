@@ -44,6 +44,7 @@ The first time you run the stack, the `master_db` and `tenant_db` databases will
 ### 5. Access the Application
 - **Frontend**: [http://localhost](http://localhost)
 - **Backend API**: [http://localhost:3009/api/health](http://localhost:3009/api/health)
+- **Redis UI (RedisInsight)**: [http://localhost:8001](http://localhost:8001)
 
 ## Service Ports Reference
 
