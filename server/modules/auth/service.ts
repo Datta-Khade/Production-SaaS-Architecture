@@ -60,7 +60,7 @@ const generateTokens = (claims: Omit<JwtPayload, 'iat' | 'exp'>): TokenPair => {
   });
 
   const refreshToken = jwt.sign(
-    { sub: claims.sub, type: 'refresh', jti: uuidv4() },
+    { sub: claims.sub, type: 'refresh', jti: uuidv4(), domain: claims.domain },
     env.REFRESH_TOKEN_SECRET as string,
     { expiresIn: env.REFRESH_TOKEN_EXPIRY as any },
   );
@@ -229,9 +229,13 @@ export const authService = {
    */
   refresh: async (rawToken: string, ipAddress?: string): Promise<TokenPair> => {
     // Verify JWT signature first
-    let decoded: { sub: string; type: string };
+    let decoded: { sub: string; type: string; domain: string };
     try {
-      decoded = jwt.verify(rawToken, env.REFRESH_TOKEN_SECRET) as { sub: string; type: string };
+      decoded = jwt.verify(rawToken, env.REFRESH_TOKEN_SECRET) as {
+        sub: string;
+        type: string;
+        domain: string;
+      };
       if (decoded.type !== 'refresh') throw new Error('wrong type');
     } catch {
       throw new UnauthorizedError('Invalid or expired refresh token');
@@ -266,12 +270,12 @@ export const authService = {
       [tokenRow.uuid],
     );
 
-    // Generate new pair
+    // Generate new pair — domain is carried forward from the verified refresh token payload
     const { accessToken, refreshToken: newRefreshToken } = generateTokens({
       sub: tokenRow.user_uuid,
       email: tokenRow.email,
       role: tokenRow.assigned_role || tokenRow.role,
-      domain: 'localhost',
+      domain: decoded.domain,
     });
 
     // Store new refresh token
