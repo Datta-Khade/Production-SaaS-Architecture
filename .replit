@@ -1,3 +1,53 @@
 modules = ["nodejs-20"]
 [agent]
 expertMode = true
+
+[userenv]
+
+[userenv.development]
+NODE_ENV = "development"
+PORT = "5000"
+APP_URL = "http://localhost:3000"
+JWT_SECRET = "1a42842d235153b27ed3e11769f08ac437731b990ac6a43349fe43ff548c2e0160982c4cfa9c6c623967ec75c40ec520"
+JWT_EXPIRY = "15m"
+REFRESH_TOKEN_SECRET = "776188af458feee36076cdeeb1cfa188cdec0b6de276f293ae5af79789de65dc50c475dd450ab3135d9ecbd45cac55f4"
+REFRESH_TOKEN_EXPIRY = "7d"
+ENCRYPTION_KEY = "87ac40b89ea158c19e67efcdf6dee0aa98cd94e30c77f0a0ea6e16fa11a8d5e4"
+VITE_STORAGE_KEY = "fc92f5b024d5403a13aaefca6687465bad66147a6c418c1e"
+REDIS_ENABLED = "false"
+MULTI_TENANT = "false"
+AUTH_BYPASS = "false"
+LOG_LEVEL = "info"
+LOG_PRETTY = "false"
+LOG_HTTP_REQUESTS = "false"
+RATE_LIMIT_WINDOW_MS = "60000"
+RATE_LIMIT_MAX = "100"
+EMAIL_FROM = "noreply@localhost"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash -c 'export MASTER_DATABASE_URL=$DATABASE_URL && npm run dev:server'"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[ports]]
+localPort = 5000
+externalPort = 80

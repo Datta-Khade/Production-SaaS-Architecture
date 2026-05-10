@@ -1,0 +1,1780 @@
+openapi: 3.0.3
+
+info:
+  title: Production SaaS API
+  version: 1.0.0
+  description: |
+    Multi-tenant SaaS API with database-per-tenant isolation.
+
+    ## Authentication
+    Most endpoints require a **Bearer JWT** in the `Authorization` header.
+    Obtain a token via `POST /api/v2/auth/login`.
+
+    ## Multi-Tenancy
+    Authenticated routes require one of:
+    - `x-tenant-id` header — the tenant's unique ID (`tuid`)
+    - `x-tenant-domain` header — the tenant's domain (e.g. `acme.localhost`)
+
+    ## Response Envelope
+    All responses follow a consistent envelope:
+    ```json
+    { "success": true, "data": <payload>, "message": "optional" }
+    ```
+    Paginated lists add a `meta` block instead of `message`.
+
+    ## Error Codes
+    | HTTP | code | Meaning |
+    |------|------|---------|
+    | 400 | VALIDATION_ERROR | Invalid request body or query params |
+    | 401 | UNAUTHORIZED | Missing or invalid JWT |
+    | 403 | FORBIDDEN | Authenticated but insufficient role |
+    | 404 | NOT_FOUND | Resource does not exist |
+    | 409 | CONFLICT | Duplicate resource (e.g. email) |
+    | 429 | RATE_LIMIT_EXCEEDED | Too many requests |
+    | 500 | INTERNAL_ERROR | Unexpected server error |
+
+  contact:
+    name: API Support
+    email: support@yourdomain.com
+
+servers:
+  - url: http://localhost:3009
+    description: Local development
+  - url: http://localhost:5005
+    description: Local dev (alternate port)
+
+# ─────────────────────────────────────────────
+# Security Schemes
+# ─────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token obtained from `/api/v2/auth/login`. Expires in 15 minutes.
+
+  # ─── Reusable Headers ───
+  headers:
+    X-RateLimit-Limit:
+      description: Maximum requests allowed in the current window
+      schema:
+        type: integer
+    X-RateLimit-Remaining:
+      description: Requests remaining in the current window
+      schema:
+        type: integer
+    X-RateLimit-Reset:
+      description: Unix timestamp when the window resets
+      schema:
+        type: integer
+
+  # ─── Reusable Parameters ───
+  parameters:
+    TenantId:
+      name: x-tenant-id
+      in: header
+      description: Tenant unique ID. Provide either this or `x-tenant-domain`.
+      schema:
+        type: string
+        example: tenant-abc123
+
+    TenantDomain:
+      name: x-tenant-domain
+      in: header
+      description: Tenant domain. Provide either this or `x-tenant-id`.
+      schema:
+        type: string
+        example: acme.localhost
+
+    RequestId:
+      name: x-request-id
+      in: header
+      description: Optional client-generated request ID for tracing.
+      schema:
+        type: string
+        format: uuid
+
+    PageParam:
+      name: page
+      in: query
+      description: Page number (1-indexed)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    LimitParam:
+      name: limit
+      in: query
+      description: Items per page (max 100)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    UuidParam:
+      name: uuid
+      in: path
+      required: true
+      description: Resource UUID
+      schema:
+        type: string
+        format: uuid
+
+  # ─── Reusable Schemas ───
+  schemas:
+
+    # ── Generic Responses ──
+    SuccessEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          description: Payload — null for operations with no return value
+        message:
+          type: string
+
+    ErrorEnvelope:
+      type: object
+      required: [success, code, message]
+      properties:
+        success:
+          type: boolean
+          example: false
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: Username is required
+        requestId:
+          type: string
+          format: uuid
+
+    PaginationMeta:
+      type: object
+      required: [page, limit, total, pages]
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 84
+        pages:
+          type: integer
+          example: 5
+
+    # ── Health ──
+    HealthAlive:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy]
+
+    HealthDetailed:
+      type: object
+      required: [status, version, environment, uptime, checks]
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded]
+        version:
+          type: string
+          example: 1.0.0
+        environment:
+          type: string
+          enum: [development, staging, production, test]
+        uptime:
+          type: integer
+          description: Server uptime in seconds
+          example: 3600
+        checks:
+          type: object
+          properties:
+            masterDb:
+              type: string
+              enum: [ok, error]
+            redis:
+              type: string
+              enum: [ok, error, disabled]
+
+    # ── Auth ──
+    LoginRequest:
+      type: object
+      required: [username, password, domain]
+      properties:
+        username:
+          type: string
+          description: Username or email address
+          example: admin@acme.localhost
+        password:
+          type: string
+          format: password
+          example: MySecretPass1!
+        domain:
+          type: string
+          description: Tenant domain
+          example: acme.localhost
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              description: Short-lived JWT (15 min). Store in memory only.
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+            user:
+              $ref: '#/components/schemas/UserProfile'
+
+    RefreshResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              description: New short-lived JWT
+
+    UserProfile:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        role:
+          type: string
+          example: superadmin
+        first_name:
+          type: string
+        last_name:
+          type: string
+        is_active:
+          type: boolean
+        failed_login_count:
+          type: integer
+        locked_until:
+          type: string
+          format: date-time
+          nullable: true
+
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+          format: password
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+
+    ForgotPasswordRequest:
+      type: object
+      required: [username, domain]
+      properties:
+        username:
+          type: string
+          description: Username or email address
+          example: admin@acme.localhost
+        domain:
+          type: string
+          example: acme.localhost
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, domain, new_password]
+      properties:
+        token:
+          type: string
+          description: Reset token received by email
+        domain:
+          type: string
+          example: acme.localhost
+        new_password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+
+    # ── Tasks ──
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+        uuid:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: Fix the login bug
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [todo, in_progress, done]
+          example: todo
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          format: uuid
+        updatedBy:
+          type: string
+          format: uuid
+          nullable: true
+        isDeleted:
+          type: boolean
+
+    TaskCreateRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Fix the login bug
+        description:
+          type: string
+          example: Users report 500 on bad passwords
+        status:
+          type: string
+          enum: [todo, in_progress, done]
+          default: todo
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+
+    TaskUpdateRequest:
+      type: object
+      description: All fields are optional for partial updates
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        status:
+          type: string
+          enum: [todo, in_progress, done]
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+
+    TasksListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    # ── Users ──
+    User:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+          example: user
+        assigned_role:
+          type: string
+          nullable: true
+          example: admin
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserCreateRequest:
+      type: object
+      required: [email, first_name, last_name]
+      properties:
+        username:
+          type: string
+          example: jsmith
+        email:
+          type: string
+          format: email
+          example: john.smith@acme.localhost
+        password:
+          type: string
+          format: password
+          minLength: 8
+        first_name:
+          type: string
+          example: John
+        last_name:
+          type: string
+          example: Smith
+        role:
+          type: string
+          default: user
+          example: user
+        assigned_role:
+          type: string
+          nullable: true
+          example: admin
+        is_active:
+          type: boolean
+          default: true
+
+    UserUpdateRequest:
+      type: object
+      description: All fields are optional for partial updates
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+        assigned_role:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+
+    # ── Access Control ──
+    NavigationItem:
+      type: object
+      properties:
+        muid:
+          type: string
+          description: Menu unique ID
+        name:
+          type: string
+        display_name:
+          type: string
+        route:
+          type: string
+          nullable: true
+        icon_name:
+          type: string
+          nullable: true
+        position:
+          type: string
+          enum: [header, sidebar]
+        sort_order:
+          type: integer
+        canview:
+          type: boolean
+        cancreate:
+          type: boolean
+        canedit:
+          type: boolean
+        candelete:
+          type: boolean
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/NavigationItem'
+
+    Menu:
+      type: object
+      properties:
+        id:
+          type: integer
+        muid:
+          type: string
+        name:
+          type: string
+        display_name:
+          type: string
+        route:
+          type: string
+          nullable: true
+        parent_menu:
+          type: string
+          nullable: true
+        icon_name:
+          type: string
+          nullable: true
+        position:
+          type: string
+          enum: [header, sidebar]
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
+
+    MenuCreateRequest:
+      type: object
+      required: [name, display_name]
+      properties:
+        name:
+          type: string
+          example: tasks
+        display_name:
+          type: string
+          example: Tasks
+        route:
+          type: string
+          example: /tasks
+        parent_menu:
+          type: string
+          nullable: true
+          description: muid of parent menu item
+        icon_name:
+          type: string
+          example: CheckSquare
+          description: Lucide icon name
+        position:
+          type: string
+          enum: [header, sidebar]
+          default: sidebar
+        sort_order:
+          type: integer
+          default: 0
+        is_active:
+          type: boolean
+          default: true
+
+    MenuUpdateRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+        route:
+          type: string
+        icon_name:
+          type: string
+        position:
+          type: string
+          enum: [header, sidebar]
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: integer
+        ruid:
+          type: string
+          format: uuid
+        assigned_role:
+          type: string
+          example: admin
+        roletype:
+          type: string
+          nullable: true
+        orderby:
+          type: integer
+        is_active:
+          type: boolean
+
+    RolePermission:
+      type: object
+      properties:
+        menu_uuid:
+          type: string
+          description: References menumaster.muid
+        role_uuid:
+          type: string
+          description: References rolemaster.ruid
+        canview:
+          type: boolean
+        cancreate:
+          type: boolean
+        canedit:
+          type: boolean
+        candelete:
+          type: boolean
+
+    SavePermissionsRequest:
+      type: object
+      description: Array of permission entries for the role
+      properties:
+        permissions:
+          type: array
+          items:
+            type: object
+            required: [menu_uuid]
+            properties:
+              menu_uuid:
+                type: string
+                description: menumaster.muid
+              canview:
+                type: boolean
+                default: false
+              cancreate:
+                type: boolean
+                default: false
+              canedit:
+                type: boolean
+                default: false
+              candelete:
+                type: boolean
+                default: false
+
+  # ─── Reusable Responses ───
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            code: UNAUTHORIZED
+            message: Missing or invalid authorization header
+
+    Forbidden:
+      description: Authenticated but insufficient role
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            code: FORBIDDEN
+            message: "Insufficient permissions. Required: superadmin, Current: user"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            code: NOT_FOUND
+            message: Resource not found
+
+    ValidationError:
+      description: Invalid request body or query parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            code: VALIDATION_ERROR
+            message: Title is required
+
+    RateLimited:
+      description: Too many requests
+      headers:
+        X-RateLimit-Limit:
+          $ref: '#/components/headers/X-RateLimit-Limit'
+        X-RateLimit-Remaining:
+          $ref: '#/components/headers/X-RateLimit-Remaining'
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/X-RateLimit-Reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            code: RATE_LIMIT_EXCEEDED
+            message: Too many requests. Please try again later.
+
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            success: false
+            code: INTERNAL_ERROR
+            message: An unexpected error occurred
+
+# ─────────────────────────────────────────────
+# Tags (groups in Swagger UI)
+# ─────────────────────────────────────────────
+tags:
+  - name: Health
+    description: Liveness and readiness probes for load balancers and orchestrators
+  - name: Auth
+    description: Authentication — login, token refresh, password management
+  - name: Tasks
+    description: Task management (example CRUD module — protected, tenant-scoped)
+  - name: Users (Admin)
+    description: User administration — requires authentication and tenant context
+  - name: Navigation
+    description: Dynamic navigation structure based on role permissions
+  - name: Menus (Admin)
+    description: Menu master management — superadmin only for create/update
+  - name: Permissions (Admin)
+    description: Role-based permission management
+
+# ─────────────────────────────────────────────
+# Paths
+# ─────────────────────────────────────────────
+paths:
+
+  # ════════════════════════════════════════════
+  # HEALTH
+  # ════════════════════════════════════════════
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      description: |
+        Simple alive check. Always returns 200 while the process is running.
+        Use this for Docker `HEALTHCHECK` and load-balancer probes.
+        **No authentication required. No DB query.**
+      operationId: healthAlive
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthAlive'
+              example:
+                status: healthy
+
+  /api/v2/health:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      description: |
+        Detailed health check. Queries master DB and Redis.
+        Returns `200 healthy` if all critical dependencies are up,
+        or `503 degraded` if the master DB is unreachable.
+        **No authentication required.**
+      operationId: healthDetailed
+      responses:
+        '200':
+          description: All critical dependencies healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDetailed'
+              example:
+                status: healthy
+                version: 1.0.0
+                environment: production
+                uptime: 3600
+                checks:
+                  masterDb: ok
+                  redis: ok
+        '503':
+          description: One or more critical dependencies are degraded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDetailed'
+              example:
+                status: degraded
+                version: 1.0.0
+                environment: production
+                uptime: 3600
+                checks:
+                  masterDb: error
+                  redis: ok
+
+  # ════════════════════════════════════════════
+  # AUTH
+  # ════════════════════════════════════════════
+
+  /api/v2/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      description: |
+        Authenticate with username/email, password, and tenant domain.
+
+        On success:
+        - Returns a short-lived **access token** (15 min) in the response body.
+        - Sets an **httpOnly `refresh_token` cookie** (7 days) scoped to `/api/v2/auth`.
+
+        Store the access token **in memory only** — never in localStorage.
+
+        Rate-limited (strict — fail-closed): 100 req / 60 s per tenant.
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: admin@acme.localhost
+              password: Admin@1234
+              domain: acme.localhost
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: httpOnly refresh_token cookie (7 days, SameSite=Strict)
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                success: false
+                code: UNAUTHORIZED
+                message: Invalid credentials
+        '403':
+          description: Account locked or disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                success: false
+                code: FORBIDDEN
+                message: Account locked due to too many failed attempts. Try again in 28 minutes.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v2/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      description: |
+        Exchange the **httpOnly `refresh_token` cookie** for a new access token.
+        The old refresh token is revoked and a new one is issued (token rotation).
+
+        Requires `x-tenant-id` or `x-tenant-domain` header.
+      operationId: authRefresh
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+      responses:
+        '200':
+          description: New access token issued
+          headers:
+            Set-Cookie:
+              description: New rotated httpOnly refresh_token cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+        '400':
+          description: Refresh token cookie missing
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Refresh token invalid, expired, or revoked
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v2/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      description: |
+        Revoke the current refresh token and clear the httpOnly cookie.
+        The access token (in-memory) must be discarded by the client.
+
+        Requires `x-tenant-id` or `x-tenant-domain` header.
+      operationId: authLogout
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+              example:
+                success: true
+                data: null
+                message: Logged out successfully
+
+  /api/v2/auth/profile:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      description: Returns the profile of the authenticated user.
+      operationId: authProfile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v2/auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change password
+      description: |
+        Change the current user's password. Requires the existing password.
+
+        On success, **all refresh tokens for this user are revoked** across all devices.
+        The client should discard the current access token and redirect to login.
+      operationId: authChangePassword
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+              example:
+                success: true
+                data: null
+                message: Password changed successfully. Please log in again.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v2/auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request password reset
+      description: |
+        Sends a password reset link to the user's email address.
+
+        Always returns `200` — even if the username/email does not exist.
+        This prevents user enumeration.
+
+        Rate-limited (strict): 100 req / 60 s per tenant.
+      operationId: authForgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Reset email sent (or silently skipped if user not found)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+              example:
+                success: true
+                data: null
+                message: If an account exists for that email, a reset link has been sent.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v2/auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password with token
+      description: |
+        Validate the one-time reset token (from email) and set a new password.
+
+        On success, all refresh tokens for the user are revoked.
+        Reset tokens expire after **1 hour** and are single-use.
+      operationId: authResetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+              example:
+                success: true
+                data: null
+                message: Password has been reset successfully. You can now log in.
+        '400':
+          description: Invalid or expired reset token, or validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                success: false
+                code: VALIDATION_ERROR
+                message: Invalid or expired reset token
+
+  # ════════════════════════════════════════════
+  # TASKS
+  # ════════════════════════════════════════════
+
+  /api/v2/tasks:
+    get:
+      tags: [Tasks]
+      summary: List tasks
+      description: |
+        Returns a paginated list of tasks for the current tenant.
+        Sorted by `created_at` descending (newest first).
+      operationId: tasksList
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Paginated list of tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TasksListResponse'
+              example:
+                success: true
+                data:
+                  - uuid: 550e8400-e29b-41d4-a716-446655440000
+                    title: Fix the login bug
+                    status: in_progress
+                    dueDate: null
+                    createdAt: '2026-01-15T10:00:00Z'
+                meta:
+                  page: 1
+                  limit: 20
+                  total: 42
+                  pages: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Tasks]
+      summary: Create a task
+      operationId: tasksCreate
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreateRequest'
+            example:
+              title: Fix the login bug
+              description: Users report 500 on bad passwords
+              status: todo
+              dueDate: '2026-06-01T00:00:00Z'
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Task'
+                  message:
+                    type: string
+              example:
+                success: true
+                data:
+                  uuid: 550e8400-e29b-41d4-a716-446655440000
+                  title: Fix the login bug
+                  status: todo
+                message: Task created successfully
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v2/tasks/{id}:
+    get:
+      tags: [Tasks]
+      summary: Get a task by UUID
+      operationId: tasksGet
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Task found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Tasks]
+      summary: Update a task (full or partial)
+      operationId: tasksUpdate
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+        - $ref: '#/components/parameters/RequestId'
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskUpdateRequest'
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Task'
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Tasks]
+      summary: Delete a task (soft delete)
+      operationId: tasksDelete
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Task deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+              example:
+                success: true
+                data: null
+                message: Task deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ════════════════════════════════════════════
+  # USERS (ADMIN)
+  # ════════════════════════════════════════════
+
+  /api/v2/admin/users:
+    get:
+      tags: [Users (Admin)]
+      summary: List all users
+      description: Returns all non-deleted users for the current tenant.
+      operationId: usersGetAll
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Users (Admin)]
+      summary: Create a user
+      operationId: usersCreate
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+            example:
+              username: jsmith
+              email: john.smith@acme.localhost
+              password: SecurePass1!
+              first_name: John
+              last_name: Smith
+              role: user
+              is_active: true
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Email or username already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+              example:
+                success: false
+                code: CONFLICT
+                message: Resource already exists
+
+  /api/v2/admin/users/{uuid}:
+    get:
+      tags: [Users (Admin)]
+      summary: Get a user by UUID
+      operationId: usersGetOne
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+        - $ref: '#/components/parameters/UuidParam'
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Users (Admin)]
+      summary: Update a user (partial)
+      operationId: usersUpdate
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+        - $ref: '#/components/parameters/UuidParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Users (Admin)]
+      summary: Delete a user (soft delete)
+      operationId: usersDelete
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+        - $ref: '#/components/parameters/UuidParam'
+      responses:
+        '200':
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+              example:
+                success: true
+                data: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ════════════════════════════════════════════
+  # NAVIGATION
+  # ════════════════════════════════════════════
+
+  /api/v2/navigation:
+    get:
+      tags: [Navigation]
+      summary: Get navigation for current user
+      description: |
+        Returns the dynamic navigation tree filtered and structured for the
+        authenticated user's role. Only menus where `canview = true` are returned.
+      operationId: navigationGet
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+      responses:
+        '200':
+          description: Navigation tree for the user's role
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NavigationItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ════════════════════════════════════════════
+  # MENUS (ADMIN)
+  # ════════════════════════════════════════════
+
+  /api/v2/admin/menus:
+    get:
+      tags: [Menus (Admin)]
+      summary: List all menus
+      description: Returns all menus from the master menu table. Requires authentication.
+      operationId: menusGetAll
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of menus
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Menu'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Menus (Admin)]
+      summary: Create a menu item
+      description: |
+        Create a new menu entry in the master menu table.
+        **Requires `superadmin` role.**
+      operationId: menusCreate
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuCreateRequest'
+            example:
+              name: reports
+              display_name: Reports
+              route: /reports
+              icon_name: BarChart2
+              position: sidebar
+              sort_order: 10
+      responses:
+        '201':
+          description: Menu created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Menu'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v2/admin/menus/{muid}:
+    patch:
+      tags: [Menus (Admin)]
+      summary: Update a menu item
+      description: |
+        Update an existing menu entry. All fields are optional.
+        **Requires `superadmin` role.**
+      operationId: menusUpdate
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+        - name: muid
+          in: path
+          required: true
+          description: Menu unique ID (muid)
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuUpdateRequest'
+      responses:
+        '200':
+          description: Menu updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Menu'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Menus (Admin)]
+      summary: Delete a menu item
+      description: |
+        Delete a menu entry from the master table.
+        Requires authentication and tenant context.
+      operationId: menusDelete
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+        - name: muid
+          in: path
+          required: true
+          description: Menu unique ID (muid)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Menu deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+              example:
+                success: true
+                message: Menu deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ════════════════════════════════════════════
+  # ROLES (ADMIN)
+  # ════════════════════════════════════════════
+
+  /api/v2/admin/roles:
+    get:
+      tags: [Permissions (Admin)]
+      summary: List all roles
+      description: Returns all roles from the master role table. Requires authentication.
+      operationId: rolesGetAll
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Role'
+              example:
+                success: true
+                data:
+                  - ruid: abc-123
+                    assigned_role: superadmin
+                    orderby: 100
+                    is_active: true
+                  - ruid: abc-456
+                    assigned_role: admin
+                    orderby: 80
+                    is_active: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ════════════════════════════════════════════
+  # PERMISSIONS (ADMIN)
+  # ════════════════════════════════════════════
+
+  /api/v2/admin/permissions/{roleUuid}:
+    get:
+      tags: [Permissions (Admin)]
+      summary: Get permissions for a role
+      description: |
+        Returns all menu permission entries for the given role UUID.
+        Each entry describes what the role can do on a specific menu.
+      operationId: permissionsGet
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+        - name: roleUuid
+          in: path
+          required: true
+          description: Role UUID (rolemaster.ruid)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Role permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RolePermission'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Permissions (Admin)]
+      summary: Save permissions for a role
+      description: |
+        Upsert all permission entries for the given role.
+        This is typically a full replace — all existing permissions for the role
+        are replaced with the submitted set.
+      operationId: permissionsSave
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TenantDomain'
+        - name: roleUuid
+          in: path
+          required: true
+          description: Role UUID (rolemaster.ruid)
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePermissionsRequest'
+            example:
+              permissions:
+                - menu_uuid: menu-tasks-muid
+                  canview: true
+                  cancreate: true
+                  canedit: true
+                  candelete: false
+                - menu_uuid: menu-reports-muid
+                  canview: true
+                  cancreate: false
+                  canedit: false
+                  candelete: false
+      responses:
+        '200':
+          description: Permissions saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RolePermission'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
