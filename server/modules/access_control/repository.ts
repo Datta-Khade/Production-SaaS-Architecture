@@ -1,10 +1,10 @@
 import { eq, inArray, and } from 'drizzle-orm';
 import { getDb, getMasterDb } from '../db.js';
 import { env } from '../../env.js';
-import { 
-  menuMasterTable, 
-  roleMasterTable, 
-  roleAccessTable 
+import {
+  menuMasterTable,
+  roleMasterTable,
+  roleAccessTable,
 } from '../../../shared/modules/schema/access_control.js';
 
 /**
@@ -24,11 +24,11 @@ export const accessControlRepository = {
         and(
           eq(roleMasterTable.assigned_role, roleName),
           eq(roleMasterTable.is_active, true),
-          eq(roleMasterTable.is_deleted, false)
-        )
+          eq(roleMasterTable.is_deleted, false),
+        ),
       )
       .limit(1);
-    
+
     return results[0] || null;
   },
 
@@ -40,12 +40,7 @@ export const accessControlRepository = {
     return masterDb
       .select()
       .from(roleMasterTable)
-      .where(
-        and(
-          eq(roleMasterTable.is_active, true),
-          eq(roleMasterTable.is_deleted, false)
-        )
-      )
+      .where(and(eq(roleMasterTable.is_active, true), eq(roleMasterTable.is_deleted, false)))
       .orderBy(roleMasterTable.orderby);
   },
 
@@ -61,8 +56,8 @@ export const accessControlRepository = {
         and(
           eq(roleAccessTable.role_uuid, roleUuid),
           eq(roleAccessTable.canview, true),
-          eq(roleAccessTable.is_deleted, false)
-        )
+          eq(roleAccessTable.is_deleted, false),
+        ),
       );
   },
 
@@ -79,8 +74,8 @@ export const accessControlRepository = {
         and(
           inArray(menuMasterTable.muid, muids),
           eq(menuMasterTable.is_active, true),
-          eq(menuMasterTable.is_deleted, false)
-        )
+          eq(menuMasterTable.is_deleted, false),
+        ),
       )
       .orderBy(menuMasterTable.sort_order);
   },
@@ -102,10 +97,7 @@ export const accessControlRepository = {
    */
   async createMenu(data: any) {
     const masterDb = getMasterDb(env.MASTER_DATABASE_URL);
-    return masterDb
-      .insert(menuMasterTable)
-      .values(data)
-      .returning();
+    return masterDb.insert(menuMasterTable).values(data).returning();
   },
 
   /**
@@ -157,7 +149,7 @@ export const accessControlRepository = {
         cancreate: true,
         canedit: true,
         candelete: true,
-        sort_order: 1
+        sort_order: 1,
       })
       .returning();
   },
@@ -167,7 +159,7 @@ export const accessControlRepository = {
    */
   async syncRolePermissions(roleUuid: string, permissions: any[]) {
     const db = getDb();
-    
+
     const results = [];
     for (const perm of permissions) {
       // 1. Sanitize incoming data
@@ -181,8 +173,8 @@ export const accessControlRepository = {
           and(
             eq(roleAccessTable.role_uuid, roleUuid),
             eq(roleAccessTable.menu_uuid, cleanPerm.menu_uuid),
-            eq(roleAccessTable.is_deleted, false)
-          )
+            eq(roleAccessTable.is_deleted, false),
+          ),
         )
         .limit(1);
 
@@ -200,8 +192,8 @@ export const accessControlRepository = {
           .where(
             and(
               eq(roleAccessTable.role_uuid, roleUuid),
-              eq(roleAccessTable.menu_uuid, cleanPerm.menu_uuid)
-            )
+              eq(roleAccessTable.menu_uuid, cleanPerm.menu_uuid),
+            ),
           )
           .returning();
         results.push(res[0]);
@@ -221,5 +213,5 @@ export const accessControlRepository = {
       }
     }
     return results;
-  }
+  },
 };

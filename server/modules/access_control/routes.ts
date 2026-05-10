@@ -13,30 +13,22 @@ router.get(
   '/api/v2/navigation',
   authenticate,
   asyncHandler(requireTenant),
-  asyncHandler(accessControlController.getNavigation)
+  asyncHandler(accessControlController.getNavigation),
 );
 
 /**
  * Admin: Master Menu Management
  */
-router.get(
-  '/api/v2/admin/menus',
-  authenticate,
-  asyncHandler(accessControlController.getAllMenus)
-);
+router.get('/api/v2/admin/menus', authenticate, asyncHandler(accessControlController.getAllMenus));
 
-router.get(
-  '/api/v2/admin/roles',
-  authenticate,
-  asyncHandler(accessControlController.getAllRoles)
-);
+router.get('/api/v2/admin/roles', authenticate, asyncHandler(accessControlController.getAllRoles));
 
 router.post(
   '/api/v2/admin/menus',
   authenticate,
   requireRole('superadmin'),
   asyncHandler(requireTenant),
-  asyncHandler(accessControlController.createMenu)
+  asyncHandler(accessControlController.createMenu),
 );
 
 router.patch(
@@ -44,14 +36,14 @@ router.patch(
   authenticate,
   requireRole('superadmin'),
   asyncHandler(requireTenant),
-  asyncHandler(accessControlController.updateMenu)
+  asyncHandler(accessControlController.updateMenu),
 );
 
 router.delete(
   '/api/v2/admin/menus/:muid',
   authenticate,
   asyncHandler(requireTenant),
-  asyncHandler(accessControlController.deleteMenu)
+  asyncHandler(accessControlController.deleteMenu),
 );
 
 /**
@@ -61,14 +53,14 @@ router.get(
   '/api/v2/admin/permissions/:roleUuid',
   authenticate,
   asyncHandler(requireTenant),
-  asyncHandler(accessControlController.getRolePermissions)
+  asyncHandler(accessControlController.getRolePermissions),
 );
 
 router.post(
   '/api/v2/admin/permissions/:roleUuid',
   authenticate,
   asyncHandler(requireTenant),
-  asyncHandler(accessControlController.saveRolePermissions)
+  asyncHandler(accessControlController.saveRolePermissions),
 );
 
 export default router;

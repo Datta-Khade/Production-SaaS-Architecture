@@ -1,13 +1,13 @@
 /**
  * Users Repository — Data access for users_v2 table
- * 
+ *
  * Rules:
  * - Uses getDb() for tenant isolation
  * - Soft delete via is_deleted = true
  */
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { getDb } from '../db.js';
-import { usersTable } from '../../../shared/modules/schema/users.js';
+import { usersTable, type NewUser } from '../../../shared/modules/schema/users.js';
 
 export const usersRepository = {
   /**
@@ -49,7 +49,7 @@ export const usersRepository = {
   /**
    * Create a new user
    */
-  async create(data: any) {
+  async create(data: NewUser) {
     const db = getDb();
     const result = await db.insert(usersTable).values(data).returning();
     return result[0];
@@ -58,7 +58,7 @@ export const usersRepository = {
   /**
    * Update user by UUID
    */
-  async update(uuid: string, data: any) {
+  async update(uuid: string, data: Partial<NewUser>) {
     const db = getDb();
     const result = await db
       .update(usersTable)

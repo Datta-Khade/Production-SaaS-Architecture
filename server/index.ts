@@ -1,13 +1,13 @@
 /**
  * Server Entry Point — Bootstrap and start
- * 
+ *
  * Startup sequence:
  * 1. Validate environment variables (env.ts — the boot gate)
  * 2. Connect to Redis
  * 3. Run pending migrations on master DB
  * 4. Create Express app
  * 5. Start listening
- * 
+ *
  * Graceful shutdown on SIGTERM/SIGINT.
  */
 import path from 'node:path';
@@ -18,7 +18,10 @@ import { logger } from './lib/logger.js';
 
 // ── Global Error Handling (OPS-2) ────────────────────────────
 process.on('uncaughtException', (err: Error) => {
-  logger.fatal({ err, message: err.message, stack: err.stack }, 'Uncaught Exception — crashing safely');
+  logger.fatal(
+    { err, message: err.message, stack: err.stack },
+    'Uncaught Exception — crashing safely',
+  );
   process.exit(1);
 });
 
@@ -36,19 +39,31 @@ import { setupVite, serveStatic, log } from './vite.js';
 const start = async (): Promise<void> => {
   logger.info({ env: env.NODE_ENV, port: env.PORT }, '🚀 Starting production-app server...');
 
-  // 1. Connect to Redis
-  try {
-    const redis = getRedis();
-    await redis.connect();
-    logger.info('✅ Redis connected');
-  } catch (err) {
-    logger.warn({ error: (err as Error).message }, '⚠️ Redis connection failed — continuing without cache');
+  // 1. Connect to Redis (Optional)
+  if (env.REDIS_ENABLED) {
+    try {
+      const redis = getRedis();
+      if (redis) {
+        await redis.connect();
+        logger.info('✅ Redis connected');
+      }
+    } catch (err) {
+      logger.warn(
+        { error: (err as Error).message },
+        '⚠️ Redis connection failed — continuing without cache',
+      );
+    }
+  } else {
+    logger.info('ℹ️ Redis is disabled via env — skipping connection');
   }
 
   // 2. Run pending migrations on master DB
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   try {
-    await runMigrations(env.MASTER_DATABASE_URL, path.resolve(__dirname, '../migrations', 'master'));
+    await runMigrations(
+      env.MASTER_DATABASE_URL,
+      path.resolve(__dirname, '../migrations', 'master'),
+    );
     logger.info('✅ Master DB migrations complete');
 
     // Also run tenant migrations for the default dev DB if present
@@ -66,7 +81,7 @@ const start = async (): Promise<void> => {
   const server = createServer(app);
 
   // 4. Setup Frontend (Dev Middleware or Static Serving)
-  if (app.get("env") === "development") {
+  if (app.get('env') === 'development') {
     await setupVite(app, server);
     log('✨ Vite dev middleware enabled');
   } else {
@@ -80,13 +95,16 @@ const start = async (): Promise<void> => {
   const multiTenant = process.env.MULTI_TENANT;
   const authBypass = process.env.AUTH_BYPASS;
 
-  const httpServer = server.listen({
-    port,
-    host: "0.0.0.0",
-  }, () => {
-    log(`serving on port ${port}`);
-    log(` Environment variables: ${url} multiTenant: ${multiTenant} authBypass: ${authBypass}`)
-  });
+  const httpServer = server.listen(
+    {
+      port,
+      host: '0.0.0.0',
+    },
+    () => {
+      log(`serving on port ${port}`);
+      log(` Environment variables: ${url} multiTenant: ${multiTenant} authBypass: ${authBypass}`);
+    },
+  );
 
   // ─── Graceful Shutdown ──────────────────────────────────────
   const shutdown = async (signal: string): Promise<void> => {
@@ -95,10 +113,7 @@ const start = async (): Promise<void> => {
     httpServer.close(async () => {
       logger.info('HTTP server closed');
 
-      await Promise.allSettled([
-        closeRedis(),
-        closeAllPools(),
-      ]);
+      await Promise.allSettled([closeRedis(), closeAllPools()]);
 
       logger.info('All connections closed — exiting');
       process.exit(0);
@@ -113,19 +128,9 @@ const start = async (): Promise<void> => {
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
-
-  // Catch unhandled rejections — log and continue (don't crash)
-  process.on('unhandledRejection', (reason) => {
-    logger.error({ error: reason }, 'Unhandled promise rejection');
-  });
-
-  process.on('uncaughtException', (err) => {
-    logger.fatal({ error: err.message, stack: err.stack }, 'Uncaught exception — shutting down');
-    process.exit(1);
-  });
 };
 
 start().catch((err) => {
-  console.error('Failed to start server:', err);
+  logger.fatal({ err }, 'Failed to start server');
   process.exit(1);
 });

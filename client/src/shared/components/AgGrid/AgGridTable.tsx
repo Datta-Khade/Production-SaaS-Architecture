@@ -1,12 +1,6 @@
 import React, { useMemo, useCallback, useEffect, useRef, useState } from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import {
-  ColDef,
-  GridReadyEvent,
-  GridApi,
-  ModuleRegistry,
-  GridOptions
-} from 'ag-grid-community';
+import { ColDef, GridReadyEvent, GridApi, ModuleRegistry, GridOptions } from 'ag-grid-community';
 import {
   AllEnterpriseModule,
   SetFilterModule,
@@ -28,7 +22,7 @@ import {
   CsvExportModule,
   ClipboardModule,
   AdvancedFilterModule,
-  LicenseManager
+  LicenseManager,
 } from 'ag-grid-enterprise';
 import { useViewport, getViewportConfig } from '@/shared/hooks/useViewport';
 
@@ -37,7 +31,9 @@ const licenseKey = import.meta.env.VITE_AG_GRID_LICENSE_KEY || import.meta.env.A
 if (licenseKey) {
   LicenseManager.setLicenseKey(licenseKey);
 } else {
-  console.warn('AG Grid Enterprise license key not found. Please set VITE_AG_GRID_LICENSE_KEY environment variable.');
+  console.warn(
+    'AG Grid Enterprise license key not found. Please set VITE_AG_GRID_LICENSE_KEY environment variable.',
+  );
 }
 
 // Register AG Grid Enterprise modules
@@ -61,7 +57,7 @@ ModuleRegistry.registerModules([
   ExcelExportModule,
   CsvExportModule,
   ClipboardModule,
-  AdvancedFilterModule
+  AdvancedFilterModule,
 ]);
 
 export interface AgGridTableProps {
@@ -144,7 +140,7 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
       const finalHeight = Math.max(400, availableHeight);
 
       const newHeight = `${finalHeight}px`;
-      setComputedHeight(prev => {
+      setComputedHeight((prev) => {
         const prevNum = parseInt(prev);
         if (Math.abs(prevNum - finalHeight) > 1) {
           return newHeight;
@@ -184,7 +180,7 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
           childList: true,
           subtree: true,
           attributes: true,
-          attributeFilter: ['class', 'style', 'hidden', 'data-state']
+          attributeFilter: ['class', 'style', 'hidden', 'data-state'],
         });
       }
     }
@@ -213,64 +209,70 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
     };
   }, [fillAvailableHeight, bottomPadding]);
 
-  const handleResponsiveGrid = useCallback((gridApi: GridApi) => {
-    if (!gridApi || gridApi.isDestroyed()) return;
+  const handleResponsiveGrid = useCallback(
+    (gridApi: GridApi) => {
+      if (!gridApi || gridApi.isDestroyed()) return;
 
-    const config = getViewportConfig(viewport);
+      const config = getViewportConfig(viewport);
 
-    if (config.useFitColumns) {
-      try {
-        gridApi.sizeColumnsToFit();
-      } catch (error) {
-        console.warn('Failed to size columns to fit:', error);
-      }
-    } else {
-      const allColumns = gridApi.getAllDisplayedColumns();
-      if (allColumns && allColumns.length > 0) {
-        const columnWidths = allColumns.map((col: any) => {
-          const colDef = col.getColDef();
-          const currentWidth = col.getActualWidth();
-          const targetWidth = colDef.width || Math.max(config.minColumnWidth, currentWidth || 70);
+      if (config.useFitColumns) {
+        try {
+          gridApi.sizeColumnsToFit();
+        } catch (error) {
+          console.warn('Failed to size columns to fit:', error);
+        }
+      } else {
+        const allColumns = gridApi.getAllDisplayedColumns();
+        if (allColumns && allColumns.length > 0) {
+          const columnWidths = allColumns.map((col: any) => {
+            const colDef = col.getColDef();
+            const currentWidth = col.getActualWidth();
+            const targetWidth = colDef.width || Math.max(config.minColumnWidth, currentWidth || 70);
 
-          return {
-            key: col.getColId(),
-            newWidth: targetWidth
-          };
-        });
+            return {
+              key: col.getColId(),
+              newWidth: targetWidth,
+            };
+          });
 
-        if (columnWidths.length) {
-          try {
-            gridApi.setColumnWidths(columnWidths);
-            setTimeout(() => {
-              if (!gridApi.isDestroyed()) {
-                gridApi.refreshCells();
-              }
-            }, 100);
-          } catch (error) {
-            console.warn('Failed to set column widths:', error);
+          if (columnWidths.length) {
+            try {
+              gridApi.setColumnWidths(columnWidths);
+              setTimeout(() => {
+                if (!gridApi.isDestroyed()) {
+                  gridApi.refreshCells();
+                }
+              }, 100);
+            } catch (error) {
+              console.warn('Failed to set column widths:', error);
+            }
           }
         }
       }
-    }
-  }, [viewport]);
+    },
+    [viewport],
+  );
 
   const rowDataRef = useRef(rowData);
   useEffect(() => {
     rowDataRef.current = rowData;
   }, [rowData]);
 
-  const handleGridReady = useCallback((event: GridReadyEvent) => {
-    gridApiRef.current = event.api;
-    handleResponsiveGrid(event.api);
+  const handleGridReady = useCallback(
+    (event: GridReadyEvent) => {
+      gridApiRef.current = event.api;
+      handleResponsiveGrid(event.api);
 
-    if (rowDataRef.current) {
-      event.api.setGridOption('rowData', rowDataRef.current);
-    }
+      if (rowDataRef.current) {
+        event.api.setGridOption('rowData', rowDataRef.current);
+      }
 
-    if (onGridReady) {
-      onGridReady(event);
-    }
-  }, [onGridReady, handleResponsiveGrid]);
+      if (onGridReady) {
+        onGridReady(event);
+      }
+    },
+    [onGridReady, handleResponsiveGrid],
+  );
 
   useEffect(() => {
     if (gridApiRef.current && !gridApiRef.current.isDestroyed()) {
@@ -284,16 +286,19 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
     }
   }, [rowData]);
 
-  const defaultColDef = useMemo(() => ({
-    sortable: true,
-    filter: true,
-    resizable: true,
-    menuTabs: ['filterMenuTab' as const, 'generalMenuTab' as const, 'columnsMenuTab' as const],
-    floatingFilter: false,
-    minWidth: getViewportConfig(viewport).minColumnWidth,
-    wrapHeaderText: true,
-    autoHeaderHeight: true
-  }), [viewport]);
+  const defaultColDef = useMemo(
+    () => ({
+      sortable: true,
+      filter: true,
+      resizable: true,
+      menuTabs: ['filterMenuTab' as const, 'generalMenuTab' as const, 'columnsMenuTab' as const],
+      floatingFilter: false,
+      minWidth: getViewportConfig(viewport).minColumnWidth,
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
+    }),
+    [viewport],
+  );
 
   const sideBar = useMemo(() => {
     if (!enableSideBar) return false;
@@ -313,17 +318,17 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
             suppressPivotMode: !enablePivoting,
             suppressColumnFilter: false,
             suppressColumnSelectAll: false,
-            suppressColumnExpandAll: false
-          }
+            suppressColumnExpandAll: false,
+          },
         },
         {
           id: 'filters',
           labelDefault: 'Filters',
           labelKey: 'filters',
           iconKey: 'filter',
-          toolPanel: 'agFiltersToolPanel'
-        }
-      ]
+          toolPanel: 'agFiltersToolPanel',
+        },
+      ],
     };
   }, [enableSideBar, enableRowGrouping, enablePivoting]);
 
@@ -334,23 +339,23 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
       statusPanels: [
         {
           statusPanel: 'agTotalAndFilteredRowCountComponent',
-          align: 'left' as const
+          align: 'left' as const,
         },
         {
           statusPanel: 'agAggregationComponent',
-          align: 'center' as const
+          align: 'center' as const,
         },
         {
           statusPanel: 'agSelectedRowCountComponent',
-          align: 'right' as const
-        }
-      ]
+          align: 'right' as const,
+        },
+      ],
     };
   }, [enableStatusBar]);
 
   const rowSelectionConfig = useMemo(() => {
     if (rowSelection === false) return undefined;
-    return rowSelection === 'single' ? 'single' as const : 'multiple' as const;
+    return rowSelection === 'single' ? ('single' as const) : ('multiple' as const);
   }, [rowSelection]);
 
   const getContextMenuItems = useCallback((): (string | 'separator')[] => {
@@ -363,60 +368,58 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
     ];
 
     if (enableExport) {
-      return [
-        ...baseItems,
-        'separator',
-        'csvExport',
-        'excelExport',
-      ];
+      return [...baseItems, 'separator', 'csvExport', 'excelExport'];
     }
 
     return baseItems;
   }, [enableExport]) as () => any;
 
-  const defaultGridOptions: Partial<GridOptions> = useMemo(() => ({
-    theme: 'legacy',
-    defaultColDef,
-    headerHeight: getViewportConfig(viewport).headerHeight,
-    groupHeaderHeight: 30,
-    rowHeight: getViewportConfig(viewport).rowHeight,
-    suppressHorizontalScroll: false,
-    animateRows: true,
-    rowSelection: rowSelectionConfig,
-    getRowStyle: () => ({ backgroundColor: 'white' }),
-    cellSelection: true,
-    enableAdvancedFilter,
-    sideBar: getViewportConfig(viewport).showSideBar ? sideBar : false,
-    statusBar: getViewportConfig(viewport).showStatusBar ? statusBar : undefined,
-    allowContextMenuWithControlKey: true,
-    copyHeadersToClipboard: true,
-    copyGroupHeadersToClipboard: true,
-    enableCellTextSelection: true,
-    enableBrowserTooltips: false,
-    tooltipShowDelay: 2000,
-    rowGroupPanelShow: 'never',
-    pivotPanelShow: enablePivoting ? 'always' : 'never',
-    functionsReadOnly: false,
-    suppressAggFuncInHeader: false,
-    alwaysShowHorizontalScroll: getViewportConfig(viewport).alwaysShowHorizontalScroll,
-    alwaysShowVerticalScroll: false,
-    suppressScrollOnNewData: true,
-    suppressAutoSize: getViewportConfig(viewport).isTabletOrPhone,
-    suppressColumnVirtualisation: false,
-    debug: false,
-    getContextMenuItems: enableExport ? getContextMenuItems : undefined,
-  }), [
-    defaultColDef,
-    rowSelectionConfig,
-    enableAdvancedFilter,
-    sideBar,
-    statusBar,
-    enableRowGrouping,
-    enablePivoting,
-    viewport,
-    enableExport,
-    getContextMenuItems,
-  ]);
+  const defaultGridOptions: Partial<GridOptions> = useMemo(
+    () => ({
+      theme: 'legacy',
+      defaultColDef,
+      headerHeight: getViewportConfig(viewport).headerHeight,
+      groupHeaderHeight: 30,
+      rowHeight: getViewportConfig(viewport).rowHeight,
+      suppressHorizontalScroll: false,
+      animateRows: true,
+      rowSelection: rowSelectionConfig,
+      getRowStyle: () => ({ backgroundColor: 'white' }),
+      cellSelection: true,
+      enableAdvancedFilter,
+      sideBar: getViewportConfig(viewport).showSideBar ? sideBar : false,
+      statusBar: getViewportConfig(viewport).showStatusBar ? statusBar : undefined,
+      allowContextMenuWithControlKey: true,
+      copyHeadersToClipboard: true,
+      copyGroupHeadersToClipboard: true,
+      enableCellTextSelection: true,
+      enableBrowserTooltips: false,
+      tooltipShowDelay: 2000,
+      rowGroupPanelShow: 'never',
+      pivotPanelShow: enablePivoting ? 'always' : 'never',
+      functionsReadOnly: false,
+      suppressAggFuncInHeader: false,
+      alwaysShowHorizontalScroll: getViewportConfig(viewport).alwaysShowHorizontalScroll,
+      alwaysShowVerticalScroll: false,
+      suppressScrollOnNewData: true,
+      suppressAutoSize: getViewportConfig(viewport).isTabletOrPhone,
+      suppressColumnVirtualisation: false,
+      debug: false,
+      getContextMenuItems: enableExport ? getContextMenuItems : undefined,
+    }),
+    [
+      defaultColDef,
+      rowSelectionConfig,
+      enableAdvancedFilter,
+      sideBar,
+      statusBar,
+      enableRowGrouping,
+      enablePivoting,
+      viewport,
+      enableExport,
+      getContextMenuItems,
+    ],
+  );
 
   const parseHeightToPixels = useCallback((value: string | number): number => {
     if (typeof value === 'number') return value;
@@ -437,7 +440,7 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
     const footerHeight = enableStatusBar ? 40 : 0;
     const padding = 4;
 
-    const calculatedHeight = headerHeight + (rowData.length * rowHeight) + footerHeight + padding;
+    const calculatedHeight = headerHeight + rowData.length * rowHeight + footerHeight + padding;
     const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 900;
     const availableHeight = screenHeight - 200;
 
@@ -445,15 +448,26 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
     const minHeightNum = parseHeightToPixels(minHeight);
 
     const effectiveMaxHeight = Math.min(maxHeightNum, availableHeight);
-    const constrainedHeight = Math.max(minHeightNum, Math.min(calculatedHeight, effectiveMaxHeight));
+    const constrainedHeight = Math.max(
+      minHeightNum,
+      Math.min(calculatedHeight, effectiveMaxHeight),
+    );
 
     return `${constrainedHeight}px`;
-  }, [autoHeight, height, rowData.length, enableStatusBar, maxHeight, minHeight, parseHeightToPixels]);
+  }, [
+    autoHeight,
+    height,
+    rowData.length,
+    enableStatusBar,
+    maxHeight,
+    minHeight,
+    parseHeightToPixels,
+  ]);
 
   const finalGridOptions = useMemo(() => {
     const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 900;
     const availableHeight = screenHeight - 200;
-    const calculatedHeight = 50 + (rowData.length * 50) + (enableStatusBar ? 40 : 0) + 4;
+    const calculatedHeight = 50 + rowData.length * 50 + (enableStatusBar ? 40 : 0) + 4;
     const needsScroll = autoHeight && calculatedHeight > availableHeight;
     const defaultDomLayout = needsScroll ? ('normal' as const) : ('autoHeight' as const);
 
@@ -463,7 +477,7 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
       alwaysShowVerticalScroll: gridOptions.alwaysShowVerticalScroll ?? false,
       suppressHorizontalScroll: gridOptions.suppressHorizontalScroll ?? false,
       suppressScrollOnNewData: gridOptions.suppressScrollOnNewData ?? true,
-      domLayout: gridOptions.domLayout ?? defaultDomLayout
+      domLayout: gridOptions.domLayout ?? defaultDomLayout,
     };
   }, [defaultGridOptions, gridOptions, autoHeight, rowData.length, enableStatusBar]);
 
@@ -471,8 +485,8 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
     if (finalGridOptions.domLayout === 'normal') return true;
     if (!autoHeight) return false;
     const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 900;
-    const calculatedHeight = 50 + (rowData.length * 50) + 4;
-    return calculatedHeight > (screenHeight - 200);
+    const calculatedHeight = 50 + rowData.length * 50 + 4;
+    return calculatedHeight > screenHeight - 200;
   }, [autoHeight, rowData.length, finalGridOptions.domLayout]);
 
   const containerHeight = useMemo(() => {
@@ -485,7 +499,7 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
     if (fillAvailableHeight) {
       return {
         ...finalGridOptions,
-        domLayout: 'normal' as const
+        domLayout: 'normal' as const,
       };
     }
     return finalGridOptions;
@@ -496,7 +510,7 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
   const containerStyles = useMemo((): React.CSSProperties => {
     const baseStyles: React.CSSProperties = {
       width,
-      overflow: showScroll ? 'auto' : 'visible'
+      overflow: showScroll ? 'auto' : 'visible',
     };
 
     if (fillAvailableHeight) {
@@ -504,13 +518,13 @@ export const AgGridTable: React.FC<AgGridTableProps> = ({
         ...baseStyles,
         height: computedHeight,
         minHeight: '400px',
-        overflow: 'auto'
+        overflow: 'auto',
       };
     }
 
     return {
       ...baseStyles,
-      height: containerHeight
+      height: containerHeight,
     };
   }, [fillAvailableHeight, computedHeight, containerHeight, width, showScroll]);
 
@@ -568,7 +582,7 @@ export const agGridUtils = {
   },
   deselectAll: (gridApi: GridApi) => {
     gridApi.deselectAll();
-  }
+  },
 };
 
 export default AgGridTable;

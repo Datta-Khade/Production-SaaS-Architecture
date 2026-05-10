@@ -1,8 +1,8 @@
 /**
  * Create Tenant Script — Admin: provision a new tenant
- * 
+ *
  * Usage: npm run tenant:create -- --name "Acme Corp" --domain "acme.production.so"
- * 
+ *
  * This script:
  * 1. Creates a new PostgreSQL database for the tenant
  * 2. Runs all migrations on the new database
@@ -14,12 +14,15 @@ import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 import { runMigrations } from '../server/modules/migrationRunner.js';
+import { serverEncrypt } from '../server/lib/serverEncryption.js';
 
 dotenv.config({ path: '.env.development' });
 
 const { Pool } = pg;
 
-const MASTER_DB_URL = process.env.MASTER_DATABASE_URL || 'postgresql://dev:devpassword@localhost:5432/production_master';
+const MASTER_DB_URL =
+  process.env.MASTER_DATABASE_URL ||
+  'postgresql://dev:devpassword@localhost:5432/production_master';
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -35,7 +38,9 @@ async function createTenant(): Promise<void> {
   const plan = getArg('plan') || 'starter';
 
   if (!companyName || !domain) {
-    console.error('Usage: npm run tenant:create -- --name "Company Name" --domain "company.production.so" [--email admin@company.com] [--plan starter|pro|enterprise]');
+    console.error(
+      'Usage: npm run tenant:create -- --name "Company Name" --domain "company.production.so" [--email admin@company.com] [--plan starter|pro|enterprise]',
+    );
     process.exit(1);
   }
 
@@ -67,13 +72,17 @@ async function createTenant(): Promise<void> {
     await runMigrations(tenantDbUrl);
     console.log('   ✅ Migrations applied');
 
-    // 4. Insert tenant record into master DB
+    // 4. Insert tenant record into master DB (db_url encrypted at rest)
     console.log('📦 Registering tenant in master DB...');
-    await masterPool.query(`
+    const encryptedDbUrl = serverEncrypt(tenantDbUrl);
+    await masterPool.query(
+      `
       INSERT INTO tenants (tuid, domain, db_url, company_name, plan, is_active)
       VALUES ($1, $2, $3, $4, $5, true)
-    `, [tuid, domain, tenantDbUrl, companyName, plan]);
-    console.log('   ✅ Tenant registered');
+    `,
+      [tuid, domain, encryptedDbUrl, companyName, plan],
+    );
+    console.log('   ✅ Tenant registered (db_url encrypted)');
 
     // 5. Create admin user in tenant DB
     console.log('📦 Creating admin user...');
@@ -82,10 +91,13 @@ async function createTenant(): Promise<void> {
       const passwordHash = await bcrypt.hash('changeme', 12);
       const adminUuid = uuidv4();
 
-      await tenantPool.query(`
+      await tenantPool.query(
+        `
         INSERT INTO users_v2 (uuid, email, password_hash, first_name, last_name, role, is_active)
         VALUES ($1, $2, $3, $4, $5, $6, true)
-      `, [adminUuid, adminEmail, passwordHash, 'Admin', companyName, 'admin']);
+      `,
+        [adminUuid, adminEmail, passwordHash, 'Admin', companyName, 'admin'],
+      );
 
       console.log(`   ✅ Admin user: ${adminEmail} / changeme`);
     } finally {
@@ -102,4 +114,3 @@ async function createTenant(): Promise<void> {
 }
 
 createTenant();
-

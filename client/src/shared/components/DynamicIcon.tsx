@@ -12,12 +12,12 @@ interface DynamicIconProps extends LucideProps {
  */
 export const DynamicIcon: React.FC<DynamicIconProps> = ({ name, ...props }) => {
   if (!name) return <Icons.HelpCircle {...props} />;
-  
+
   const Icon = (Icons as any)[name];
-  
+
   if (!Icon) {
     return <Icons.HelpCircle {...props} />;
   }
-  
+
   return <Icon {...props} />;
 };

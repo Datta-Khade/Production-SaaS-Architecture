@@ -1,6 +1,6 @@
 /**
  * Express App Factory — Configures and returns the Express application
- * 
+ *
  * Middleware order matters:
  * 1. Security (helmet, cors)
  * 2. Body parsing (json, cookie)
@@ -16,25 +16,29 @@ import cookieParser from 'cookie-parser';
 import { env } from './env.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { globalErrorHandler } from './middleware/globalErrorHandler.js';
-import { NotFoundError } from '../shared/modules/errors/index.js';
 import routes from './routes.js';
 
 export const createApp = (): express.Application => {
   const app = express();
 
   // ─── Security ───────────────────────────────────────────────
-  app.use(helmet({
-    contentSecurityPolicy: env.NODE_ENV === 'production' ? undefined : false,
-  }));
-  
-  app.use(cors({
-    origin: env.NODE_ENV === 'production' 
-      ? env.APP_URL 
-      : ['http://localhost:5173', 'http://localhost:3000'],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id', 'x-request-id'],
-  }));
+  app.use(
+    helmet({
+      contentSecurityPolicy: env.NODE_ENV === 'production' ? undefined : false,
+    }),
+  );
+
+  app.use(
+    cors({
+      origin:
+        env.NODE_ENV === 'production'
+          ? env.APP_URL
+          : ['http://localhost:5173', 'http://localhost:3000', env.APP_URL],
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id', 'x-request-id'],
+    }),
+  );
 
   // ─── Body Parsing ──────────────────────────────────────────
   app.use(express.json({ limit: '10mb' }));
@@ -49,7 +53,6 @@ export const createApp = (): express.Application => {
 
   // ─── Routes ────────────────────────────────────────────────
   app.use(routes);
-
 
   // ─── Global Error Handler (MUST be last) ───────────────────
   app.use(globalErrorHandler);

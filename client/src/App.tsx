@@ -1,6 +1,6 @@
 /**
  * Root App Component — Router with lazy-loaded modules
- * 
+ *
  * Every module is:
  * 1. Lazy-loaded for code splitting
  * 2. Wrapped in ModuleErrorBoundary
@@ -63,109 +63,109 @@ const App: React.FC = () => {
   return (
     <>
       <Routes>
-      {/* Public routes */}
-      <Route
-        path="/login"
-        element={
-          <Suspense fallback={<PageSkeleton />}>
-            <LoginPage />
-          </Suspense>
-        }
-      />
-      <Route
-        path="/auth/reset-password"
-        element={
-          <Suspense fallback={<PageSkeleton />}>
-            <ResetPasswordPage />
-          </Suspense>
-        }
-      />
-      <Route
-        path="/dev/ui-test"
-        element={
-          <Suspense fallback={<PageSkeleton />}>
-            <UITestPage />
-          </Suspense>
-        }
-      />
-
-      {/* Protected routes — wrapped in AppLayout shell */}
-      <Route
-        element={
-          <ProtectedRoute requiredRole="user">
-            <AppLayout />
-          </ProtectedRoute>
-        }
-      >
+        {/* Public routes */}
         <Route
-          path="/dashboard"
+          path="/login"
           element={
-            <ModuleErrorBoundary moduleName="Dashboard">
-              <Suspense fallback={<PageSkeleton />}>
-                <DashboardPage />
-              </Suspense>
-            </ModuleErrorBoundary>
+            <Suspense fallback={<PageSkeleton />}>
+              <LoginPage />
+            </Suspense>
           }
         />
         <Route
-          path="/tasks"
+          path="/auth/reset-password"
           element={
-            <ModuleErrorBoundary moduleName="Tasks">
-              <Suspense fallback={<PageSkeleton />}>
-                <TasksPage />
-              </Suspense>
-            </ModuleErrorBoundary>
+            <Suspense fallback={<PageSkeleton />}>
+              <ResetPasswordPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/dev/ui-test"
+          element={
+            <Suspense fallback={<PageSkeleton />}>
+              <UITestPage />
+            </Suspense>
           }
         />
 
-        {/* Admin Module */}
-        <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
+        {/* Protected routes — wrapped in AppLayout shell */}
         <Route
-          path="/admin/users"
           element={
-            <ModuleErrorBoundary moduleName="Admin/Users">
-              <Suspense fallback={<PageSkeleton />}>
-                <UsersPage />
-              </Suspense>
-            </ModuleErrorBoundary>
+            <ProtectedRoute requiredRole="user">
+              <AppLayout />
+            </ProtectedRoute>
           }
-        />
-        <Route
-          path="/admin/roles"
-          element={
-            <ModuleErrorBoundary moduleName="Admin/Roles">
-              <Suspense fallback={<PageSkeleton />}>
-                <RolesPage />
-              </Suspense>
-            </ModuleErrorBoundary>
-          }
-        />
-        <Route
-          path="/admin/menus"
-          element={
-            <ModuleErrorBoundary moduleName="Admin/Menus">
-              <Suspense fallback={<PageSkeleton />}>
-                <MenuMasterPage />
-              </Suspense>
-            </ModuleErrorBoundary>
-          }
-        />
-        <Route
-          path="/admin/access-control"
-          element={
-            <ModuleErrorBoundary moduleName="Admin/AccessControl">
-              <Suspense fallback={<PageSkeleton />}>
-                <AccessControlPage />
-              </Suspense>
-            </ModuleErrorBoundary>
-          }
-        />
+        >
+          <Route
+            path="/dashboard"
+            element={
+              <ModuleErrorBoundary moduleName="Dashboard">
+                <Suspense fallback={<PageSkeleton />}>
+                  <DashboardPage />
+                </Suspense>
+              </ModuleErrorBoundary>
+            }
+          />
+          <Route
+            path="/tasks"
+            element={
+              <ModuleErrorBoundary moduleName="Tasks">
+                <Suspense fallback={<PageSkeleton />}>
+                  <TasksPage />
+                </Suspense>
+              </ModuleErrorBoundary>
+            }
+          />
 
-        {/* Fallback for dynamic menus not yet implemented */}
-        <Route path="*" element={<ComingSoonPage />} />
+          {/* Admin Module */}
+          <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
+          <Route
+            path="/admin/users"
+            element={
+              <ModuleErrorBoundary moduleName="Admin/Users">
+                <Suspense fallback={<PageSkeleton />}>
+                  <UsersPage />
+                </Suspense>
+              </ModuleErrorBoundary>
+            }
+          />
+          <Route
+            path="/admin/roles"
+            element={
+              <ModuleErrorBoundary moduleName="Admin/Roles">
+                <Suspense fallback={<PageSkeleton />}>
+                  <RolesPage />
+                </Suspense>
+              </ModuleErrorBoundary>
+            }
+          />
+          <Route
+            path="/admin/menus"
+            element={
+              <ModuleErrorBoundary moduleName="Admin/Menus">
+                <Suspense fallback={<PageSkeleton />}>
+                  <MenuMasterPage />
+                </Suspense>
+              </ModuleErrorBoundary>
+            }
+          />
+          <Route
+            path="/admin/access-control"
+            element={
+              <ModuleErrorBoundary moduleName="Admin/AccessControl">
+                <Suspense fallback={<PageSkeleton />}>
+                  <AccessControlPage />
+                </Suspense>
+              </ModuleErrorBoundary>
+            }
+          />
 
-        {/* Add more module routes here as they are built */}
-        {/* Example:
+          {/* Fallback for dynamic menus not yet implemented */}
+          <Route path="*" element={<ComingSoonPage />} />
+
+          {/* Add more module routes here as they are built */}
+          {/* Example:
         <Route
           path="/items/*"
           element={
@@ -177,11 +177,11 @@ const App: React.FC = () => {
           }
         />
         */}
-      </Route>
+        </Route>
 
-      {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        {/* Default redirect */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
       <Toaster />
     </>

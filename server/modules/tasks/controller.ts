@@ -49,7 +49,7 @@ export const tasksController = {
 
   update: async (req: Request, res: Response) => {
     const uuid = uuidSchema.parse(req.params.id);
-    
+
     // Partial validation for updates
     const parsed = taskInputSchema.partial().safeParse(req.body);
     if (!parsed.success) {
@@ -67,7 +67,7 @@ export const tasksController = {
 
   delete: async (req: Request, res: Response) => {
     const uuid = uuidSchema.parse(req.params.id);
-    
+
     await tasksService.deleteTask(uuid, {
       user: req.user!,
       ipAddress: req.ip,
@@ -77,4 +77,3 @@ export const tasksController = {
     res.json(buildResponse(null, 'Task deleted successfully'));
   },
 };
-

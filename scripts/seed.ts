@@ -33,13 +33,31 @@ if (!MASTER_DB_URL) {
 }
 
 const TEST_DOMAIN = 'dev.localhost';
-const TEST_TUID   = 'dev-tenant';
-const PASSWORD    = 'Admin@1234';
+const TEST_TUID = 'dev-tenant';
+const PASSWORD = 'Admin@1234';
 
 const TEST_USERS = [
-  { email: 'admin@dev.localhost',   username: 'admin@dev.localhost',   role: 'superadmin', first_name: 'Admin',   last_name: 'User' },
-  { email: 'manager@dev.localhost', username: 'manager@dev.localhost', role: 'manager',    first_name: 'Manager', last_name: 'User' },
-  { email: 'user@dev.localhost',    username: 'user@dev.localhost',    role: 'user',       first_name: 'Regular', last_name: 'User' },
+  {
+    email: 'admin@dev.localhost',
+    username: 'admin@dev.localhost',
+    role: 'superadmin',
+    first_name: 'Admin',
+    last_name: 'User',
+  },
+  {
+    email: 'manager@dev.localhost',
+    username: 'manager@dev.localhost',
+    role: 'manager',
+    first_name: 'Manager',
+    last_name: 'User',
+  },
+  {
+    email: 'user@dev.localhost',
+    username: 'user@dev.localhost',
+    role: 'user',
+    first_name: 'Regular',
+    last_name: 'User',
+  },
 ];
 
 async function seed(): Promise<void> {
@@ -53,7 +71,8 @@ async function seed(): Promise<void> {
   try {
     console.log('📦 Seeding master DB...');
 
-    await masterPool.query(`
+    await masterPool.query(
+      `
       INSERT INTO tenants (tuid, domain, db_url, company_name, plan, is_active)
       VALUES ($1, $2, $3, $4, $5, true)
       ON CONFLICT (tuid) DO UPDATE
@@ -61,7 +80,9 @@ async function seed(): Promise<void> {
             db_url       = EXCLUDED.db_url,
             company_name = EXCLUDED.company_name,
             updated_at   = NOW()
-    `, [TEST_TUID, TEST_DOMAIN, TENANT_DB_URL || MASTER_DB_URL, 'Development Company', 'enterprise']);
+    `,
+      [TEST_TUID, TEST_DOMAIN, TENANT_DB_URL || MASTER_DB_URL, 'Development Company', 'enterprise'],
+    );
 
     console.log(`   ✅ Tenant: ${TEST_DOMAIN} (tuid: ${TEST_TUID})`);
   } finally {
@@ -77,7 +98,8 @@ async function seed(): Promise<void> {
     for (const u of TEST_USERS) {
       const uuid = uuidv4();
 
-      await tenantPool.query(`
+      await tenantPool.query(
+        `
         INSERT INTO users_v2 (uuid, username, email, password_hash, first_name, last_name, role, is_active)
         VALUES ($1, $2, $3, $4, $5, $6, $7, true)
         ON CONFLICT (email) DO UPDATE
@@ -85,7 +107,9 @@ async function seed(): Promise<void> {
               password_hash = EXCLUDED.password_hash,
               role          = EXCLUDED.role,
               updated_at    = NOW()
-      `, [uuid, u.username, u.email, passwordHash, u.first_name, u.last_name, u.role]);
+      `,
+        [uuid, u.username, u.email, passwordHash, u.first_name, u.last_name, u.role],
+      );
 
       console.log(`   ✅ ${u.role.padEnd(11)} — ${u.email}`);
     }

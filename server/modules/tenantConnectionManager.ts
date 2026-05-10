@@ -1,12 +1,12 @@
 /**
  * Tenant Connection Manager — Resolves tenant ID to database connection
- * 
+ *
  * Flow:
  * 1. Check Redis cache for tenant metadata (TTL 5min)
  * 2. If cache miss, query master DB tenants table
  * 3. Cache result in Redis
  * 4. Return db_url for the tenant
- * 
+ *
  * Connection pools are limited to max 5 per tenant.
  */
 import { eq, and } from 'drizzle-orm';
@@ -16,9 +16,17 @@ import { cacheGet, cacheSet, tenantCacheKey, CACHE_TTL } from '../lib/cache.js';
 import { logger } from '../lib/logger.js';
 import { env } from '../env.js';
 import { runTenantMigrations } from './migrationRunner.js';
+import { serverDecrypt, isEncrypted } from '../lib/serverEncryption.js';
 
 // Cache for tracking which tenants have already been migrated in this session
-const migratedTenants = new Set<string>();
+let migratedTenants = new Set<string>();
+
+/**
+ * Reset the migration cache — ONLY FOR TESTING
+ */
+export const resetTenantCache = () => {
+  migratedTenants = new Set<string>();
+};
 
 export interface TenantConnection {
   tuid: string;
@@ -29,9 +37,25 @@ export interface TenantConnection {
 }
 
 /**
+ * Safely decrypt a db_url value.
+ * Handles both encrypted (new) and plaintext (legacy) values for backward compatibility.
+ */
+const decryptDbUrl = (rawDbUrl: string, tuid: string): string => {
+  if (isEncrypted(rawDbUrl)) {
+    return serverDecrypt(rawDbUrl);
+  }
+  // Legacy plaintext — log a warning to encourage migration
+  logger.warn(
+    { tuid },
+    'Tenant db_url is not encrypted — run scripts/encryptExistingDbUrls.ts to fix',
+  );
+  return rawDbUrl;
+};
+
+/**
  * Resolve a tenant ID (tuid) to a database connection.
  * Returns null if tenant not found or inactive.
- * 
+ *
  * Cached in Redis for 5 minutes to reduce master DB load.
  */
 export const getTenantConnection = async (tuid: string): Promise<TenantConnection | null> => {
@@ -54,8 +78,8 @@ export const getTenantConnection = async (tuid: string): Promise<TenantConnectio
         and(
           eq(tenantsTable.tuid, tuid),
           eq(tenantsTable.is_active, true),
-          eq(tenantsTable.is_deleted, false)
-        )
+          eq(tenantsTable.is_deleted, false),
+        ),
       )
       .limit(1);
 
@@ -68,7 +92,7 @@ export const getTenantConnection = async (tuid: string): Promise<TenantConnectio
     const connection: TenantConnection = {
       tuid: tenant.tuid,
       domain: tenant.domain,
-      dbUrl: tenant.db_url,
+      dbUrl: decryptDbUrl(tenant.db_url, tenant.tuid),
       plan: tenant.plan,
       isActive: tenant.is_active ?? false,
     };
@@ -76,12 +100,18 @@ export const getTenantConnection = async (tuid: string): Promise<TenantConnectio
     // 4. Run pending migrations on tenant DB (Lazily)
     if (!migratedTenants.has(connection.tuid)) {
       try {
-        logger.info({ tuid: connection.tuid, domain: connection.domain }, '🛠️ Running pending migrations for tenant...');
+        logger.info(
+          { tuid: connection.tuid, domain: connection.domain },
+          '🛠️ Running pending migrations for tenant...',
+        );
         await runTenantMigrations(connection.dbUrl);
         migratedTenants.add(connection.tuid);
         logger.info({ tuid: connection.tuid }, '✅ Tenant migrations complete');
       } catch (migrationErr) {
-        logger.error({ tuid: connection.tuid, error: (migrationErr as Error).message }, '❌ Failed to run tenant migrations');
+        logger.error(
+          { tuid: connection.tuid, error: (migrationErr as Error).message },
+          '❌ Failed to run tenant migrations',
+        );
         // Do not return connection if migrations failed
         throw migrationErr;
       }
@@ -89,7 +119,10 @@ export const getTenantConnection = async (tuid: string): Promise<TenantConnectio
 
     return connection;
   } catch (err) {
-    logger.error({ tuid, error: (err as Error).message }, 'Failed to resolve tenant from master DB');
+    logger.error(
+      { tuid, error: (err as Error).message },
+      'Failed to resolve tenant from master DB',
+    );
     throw err;
   }
 };
@@ -113,8 +146,8 @@ export const getTenantByDomain = async (domain: string): Promise<TenantConnectio
         and(
           eq(tenantsTable.domain, domain),
           eq(tenantsTable.is_active, true),
-          eq(tenantsTable.is_deleted, false)
-        )
+          eq(tenantsTable.is_deleted, false),
+        ),
       )
       .limit(1);
 
@@ -124,7 +157,7 @@ export const getTenantByDomain = async (domain: string): Promise<TenantConnectio
     const connection: TenantConnection = {
       tuid: tenant.tuid,
       domain: tenant.domain,
-      dbUrl: tenant.db_url,
+      dbUrl: decryptDbUrl(tenant.db_url, tenant.tuid),
       plan: tenant.plan,
       isActive: tenant.is_active ?? false,
     };
@@ -134,12 +167,18 @@ export const getTenantByDomain = async (domain: string): Promise<TenantConnectio
     // 4. Run pending migrations on tenant DB (Lazily)
     if (!migratedTenants.has(connection.tuid)) {
       try {
-        logger.info({ tuid: connection.tuid, domain: connection.domain }, '🛠️ Running pending migrations for tenant...');
+        logger.info(
+          { tuid: connection.tuid, domain: connection.domain },
+          '🛠️ Running pending migrations for tenant...',
+        );
         await runTenantMigrations(connection.dbUrl);
         migratedTenants.add(connection.tuid);
         logger.info({ tuid: connection.tuid }, '✅ Tenant migrations complete');
       } catch (migrationErr) {
-        logger.error({ tuid: connection.tuid, error: (migrationErr as Error).message }, '❌ Failed to run tenant migrations');
+        logger.error(
+          { tuid: connection.tuid, error: (migrationErr as Error).message },
+          '❌ Failed to run tenant migrations',
+        );
         throw migrationErr;
       }
     }
@@ -150,4 +189,3 @@ export const getTenantByDomain = async (domain: string): Promise<TenantConnectio
     throw err;
   }
 };
-

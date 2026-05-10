@@ -15,7 +15,6 @@ const startTime = Date.now();
 const VERSION = process.env.npm_package_version || '1.0.0';
 
 export const healthController = {
-
   /**
    * Simple alive check — for load balancers / container orchestrators.
    * Always returns 200 while the process is running.
@@ -34,9 +33,14 @@ export const healthController = {
       isRedisHealthy(),
     ]);
 
-    const allHealthy = masterDbOk;                      // Redis is optional
+    const allHealthy = masterDbOk; // Redis is optional
     const status = allHealthy ? 'healthy' : 'degraded';
     const statusCode = allHealthy ? 200 : 503;
+
+    let redisStatus: string = redisOk ? 'ok' : 'error';
+    if (!env.REDIS_ENABLED) {
+      redisStatus = 'disabled';
+    }
 
     res.status(statusCode).json({
       status,
@@ -45,7 +49,7 @@ export const healthController = {
       uptime: Math.floor((Date.now() - startTime) / 1000),
       checks: {
         masterDb: masterDbOk ? 'ok' : 'error',
-        redis:    redisOk    ? 'ok' : 'degraded',  // Degraded, not error — Redis is optional
+        redis: redisStatus,
       },
     });
   },

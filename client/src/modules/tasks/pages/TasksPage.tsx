@@ -4,13 +4,13 @@ import type { Task } from '@shared/modules/schema/tasks';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/shared/components/ui/table';
 import { Plus, Pencil, Trash2, X, CheckCircle2, Clock, PlayCircle } from 'lucide-react';
 
@@ -70,7 +70,7 @@ export const TasksPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Tasks</h1>
-          <p className="text-gray-500 mt-1">Manage your team's workflow and priorities</p>
+          <p className="text-gray-500 mt-1">{"Manage your team's workflow and priorities"}</p>
         </div>
       </div>
 
@@ -78,11 +78,15 @@ export const TasksPage: React.FC = () => {
       <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            {isEditing ? <Pencil size={18} className="text-[#16569e]" /> : <Plus size={18} className="text-[#16569e]" />}
+            {isEditing ? (
+              <Pencil size={18} className="text-[#16569e]" />
+            ) : (
+              <Plus size={18} className="text-[#16569e]" />
+            )}
             {isEditing ? 'Edit Task' : 'Create New Task'}
           </h2>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
@@ -126,9 +130,9 @@ export const TasksPage: React.FC = () => {
                 <X size={16} /> Cancel
               </Button>
             )}
-            <Button 
-              type="submit" 
-              className="bg-[#16569e] hover:bg-[#1e5fa8] text-white gap-2 min-w-[140px]" 
+            <Button
+              type="submit"
+              className="bg-[#16569e] hover:bg-[#1e5fa8] text-white gap-2 min-w-[140px]"
               disabled={createTask.isPending || updateTask.isPending}
             >
               {isEditing ? <CheckCircle2 size={16} /> : <Plus size={16} />}
@@ -177,7 +181,9 @@ export const TasksPage: React.FC = () => {
                       <div className="space-y-1">
                         <div className="font-semibold text-gray-900">{task.title}</div>
                         {task.description && (
-                          <div className="text-xs text-gray-500 line-clamp-1">{task.description}</div>
+                          <div className="text-xs text-gray-500 line-clamp-1">
+                            {task.description}
+                          </div>
                         )}
                       </div>
                     </TableCell>
@@ -190,11 +196,15 @@ export const TasksPage: React.FC = () => {
                         ) : (
                           <Clock size={14} className="text-gray-400" />
                         )}
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          task.status === 'done' ? 'bg-green-50 text-green-700' :
-                          task.status === 'in_progress' ? 'bg-blue-50 text-blue-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            task.status === 'done'
+                              ? 'bg-green-50 text-green-700'
+                              : task.status === 'in_progress'
+                                ? 'bg-blue-50 text-blue-700'
+                                : 'bg-gray-100 text-gray-700'
+                          }`}
+                        >
                           {task.status.replace('_', ' ').toUpperCase()}
                         </span>
                       </div>
@@ -203,7 +213,7 @@ export const TasksPage: React.FC = () => {
                       {new Date(task.createdAt).toLocaleDateString(undefined, {
                         year: 'numeric',
                         month: 'short',
-                        day: 'numeric'
+                        day: 'numeric',
                       })}
                     </TableCell>
                     <TableCell className="text-right">
@@ -237,7 +247,8 @@ export const TasksPage: React.FC = () => {
         {data?.meta && data.meta.pages > 1 && (
           <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/30">
             <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">
-              Page {data.meta.page} of {data.meta.pages} <span className="mx-1">•</span> {data.meta.total} total tasks
+              Page {data.meta.page} of {data.meta.pages} <span className="mx-1">•</span>{' '}
+              {data.meta.total} total tasks
             </p>
             <div className="flex gap-2">
               <Button
@@ -267,4 +278,3 @@ export const TasksPage: React.FC = () => {
 };
 
 export default TasksPage;
-

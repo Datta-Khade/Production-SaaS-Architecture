@@ -57,16 +57,16 @@ export const auditLog = {
           (actor_uuid, actor_email, action, entity, entity_uuid, before_data, after_data, ip_address, request_id)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [
-          opts.actor?.sub   ?? null,
+          opts.actor?.sub ?? null,
           opts.actor?.email ?? null,
           opts.action,
           opts.entity,
-          opts.entityUuid   ?? null,
-          opts.before       ? JSON.stringify(opts.before) : null,
-          opts.after        ? JSON.stringify(opts.after)  : null,
-          opts.ipAddress    ?? null,
-          opts.requestId    ?? null,
-        ]
+          opts.entityUuid ?? null,
+          opts.before ? JSON.stringify(opts.before) : null,
+          opts.after ? JSON.stringify(opts.after) : null,
+          opts.ipAddress ?? null,
+          opts.requestId ?? null,
+        ],
       );
     } catch (err) {
       // Audit failures must NEVER crash the request

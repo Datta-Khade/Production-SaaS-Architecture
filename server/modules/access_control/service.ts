@@ -32,17 +32,23 @@ export const accessControlService = {
 
     // 2. Get permissions for this role from Tenant DB
     const permissions = await accessControlRepository.getRolePermissions(role.ruid);
-    const allowedMenuUuids = permissions.map(p => p.menu_uuid);
+    const allowedMenuUuids = permissions.map((p) => p.menu_uuid);
 
-    logger.debug({ 
-      roleName, 
-      roleUuid: role.ruid, 
-      permissionCount: permissions.length,
-      allowedMenuUuids 
-    }, 'Fetched role permissions');
+    logger.debug(
+      {
+        roleName,
+        roleUuid: role.ruid,
+        permissionCount: permissions.length,
+        allowedMenuUuids,
+      },
+      'Fetched role permissions',
+    );
 
     if (allowedMenuUuids.length === 0) {
-      logger.warn({ roleName, roleUuid: role.ruid }, 'No permissions found for role in roleaccess table');
+      logger.warn(
+        { roleName, roleUuid: role.ruid },
+        'No permissions found for role in roleaccess table',
+      );
       return [];
     }
 
@@ -54,7 +60,7 @@ export const accessControlService = {
     const rootItems: NavItem[] = [];
 
     // First pass: Create all NavItem objects
-    allMenus.forEach(menu => {
+    allMenus.forEach((menu) => {
       const item: NavItem = {
         muid: menu.muid,
         name: menu.name,
@@ -63,13 +69,13 @@ export const accessControlService = {
         iconName: menu.icon_name,
         position: (menu.position as 'header' | 'sidebar') || 'header',
         sortOrder: menu.sort_order,
-        children: []
+        children: [],
       };
       menuMap.set(menu.muid, item);
     });
 
     // Second pass: Connect children to parents
-    allMenus.forEach(menu => {
+    allMenus.forEach((menu) => {
       const item = menuMap.get(menu.muid)!;
       if (menu.parent_menu && menuMap.has(menu.parent_menu)) {
         const parent = menuMap.get(menu.parent_menu)!;
@@ -101,11 +107,17 @@ export const accessControlService = {
   /**
    * Create a new menu and automatically grant access to the creator's role
    */
-  async createMenu(data: any, currentRoleName: string) {
+  async createMenu(data: any, _currentRoleName: string) {
     const muid = `menu-${Math.random().toString(36).substring(2, 9)}`;
-    
+
     // Sanitize data
-    const { id, muid: _muid, created_at, updated_at, ...cleanData } = data;
+    const {
+      id: _id,
+      muid: _muid,
+      created_at: _createdAt,
+      updated_at: _updatedAt,
+      ...cleanData
+    } = data;
 
     // 1. Create menu in Master DB
     const results = await accessControlRepository.createMenu({
@@ -120,7 +132,13 @@ export const accessControlService = {
    */
   async updateMenu(muid: string, data: any) {
     // Sanitize data — do not allow updating primary key or audit columns
-    const { id, muid: _muid, created_at, updated_at, ...cleanData } = data;
+    const {
+      id: _id,
+      muid: _muid,
+      created_at: _createdAt,
+      updated_at: _updatedAt,
+      ...cleanData
+    } = data;
     return accessControlRepository.updateMenu(muid, cleanData);
   },
 
@@ -142,10 +160,9 @@ export const accessControlService = {
    * Bulk save/sync permissions for a role
    */
   async saveRolePermissions(roleUuid: string, permissions: any[]) {
-    // 1. Get existing permissions to track changes for audit
-    const existing = await accessControlRepository.getRolePermissions(roleUuid);
+    // TODO: Implement audit diff tracking (fetch existing before sync for before/after comparison)
 
-    // 2. Perform bulk update in a transaction
+    // Perform bulk update in a transaction
     return accessControlRepository.syncRolePermissions(roleUuid, permissions);
-  }
+  },
 };

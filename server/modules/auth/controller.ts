@@ -8,7 +8,12 @@
  * POST /api/v2/auth/logout          → Clear refresh token cookie
  */
 import { Request, Response } from 'express';
-import { loginSchema, changePasswordSchema, forgotPasswordSchema, resetPasswordSchema } from '../../../shared/modules/validators/common.js';
+import {
+  loginSchema,
+  changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from '../../../shared/modules/validators/common.js';
 import { ValidationError } from '../../../shared/modules/errors/index.js';
 import { authService } from './service.js';
 import { env } from '../../env.js';
@@ -16,10 +21,10 @@ import { env } from '../../env.js';
 const REFRESH_COOKIE_NAME = 'refresh_token';
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure:   env.NODE_ENV === 'production',
+  secure: env.NODE_ENV === 'production',
   sameSite: 'strict' as const,
-  path:     '/api/v2/auth',
-  maxAge:   7 * 24 * 60 * 60 * 1000, // 7 days
+  path: '/api/v2/auth',
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 
 const getIp = (req: Request): string =>
@@ -28,7 +33,6 @@ const getIp = (req: Request): string =>
   'unknown';
 
 export const authController = {
-
   /**
    * POST /api/v2/auth/login
    * Body: { username, password, domain }
@@ -98,15 +102,15 @@ export const authController = {
       req.user!.sub,
       parsed.data.current_password,
       parsed.data.new_password,
-      getIp(req)
+      getIp(req),
     );
 
     // Clear refresh cookie — user must re-login on all devices
     res.clearCookie(REFRESH_COOKIE_NAME, {
       httpOnly: true,
-      secure:   env.NODE_ENV === 'production',
+      secure: env.NODE_ENV === 'production',
       sameSite: 'strict',
-      path:     '/api/v2/auth',
+      path: '/api/v2/auth',
     });
 
     res.json({
@@ -129,9 +133,9 @@ export const authController = {
 
     res.clearCookie(REFRESH_COOKIE_NAME, {
       httpOnly: true,
-      secure:   env.NODE_ENV === 'production',
+      secure: env.NODE_ENV === 'production',
       sameSite: 'strict',
-      path:     '/api/v2/auth',
+      path: '/api/v2/auth',
     });
 
     res.json({ success: true, data: null, message: 'Logged out successfully' });
@@ -169,7 +173,7 @@ export const authController = {
     await authService.resetPassword(
       parsed.data.token,
       parsed.data.domain,
-      parsed.data.new_password
+      parsed.data.new_password,
     );
 
     res.json({
@@ -179,4 +183,3 @@ export const authController = {
     });
   },
 };
-

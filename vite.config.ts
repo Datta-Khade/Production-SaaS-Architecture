@@ -8,9 +8,9 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   plugins: [react()],
-  
+
   root: path.resolve(__dirname, 'client'),
-  
+
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'client', 'src'),
@@ -22,9 +22,7 @@ export default defineConfig({
   server: {
     port: 5173,
     fs: {
-      allow: [
-        path.resolve(__dirname),
-      ],
+      allow: [path.resolve(__dirname)],
     },
     proxy: {
       '/api': {

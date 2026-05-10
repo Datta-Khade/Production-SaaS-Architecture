@@ -30,20 +30,20 @@ export function useNavigation() {
 
   const navigation = data?.data || [];
 
-  const headerItems = navigation.filter(item => item.position === 'header');
-  
+  const headerItems = navigation.filter((item) => item.position === 'header');
+
   /**
    * Get sidebar items for a specific parent header menu.
    */
   const getSidebarItems = (parentMuid: string | null) => {
     if (!parentMuid) return [];
-    
+
     // Find the header item
-    const headerItem = headerItems.find(item => item.muid === parentMuid);
+    const headerItem = headerItems.find((item) => item.muid === parentMuid);
     if (!headerItem) return [];
 
     // Return its children that are marked as sidebar
-    return headerItem.children.filter(child => child.position === 'sidebar');
+    return headerItem.children.filter((child) => child.position === 'sidebar');
   };
 
   return {
@@ -51,6 +51,6 @@ export function useNavigation() {
     headerItems,
     getSidebarItems,
     isLoading,
-    error
+    error,
   };
 }

@@ -12,6 +12,7 @@ server/dist/
 .env.development
 .env.staging
 .env.production
+.env copy*
 !.env.example
 
 # IDE

@@ -1,6 +1,6 @@
 /**
  * Email Service — Interface for sending emails via SMTP
- * 
+ *
  * Uses variables from env.ts (SMTP_HOST, SMTP_PORT, etc.)
  */
 import nodemailer from 'nodemailer';
@@ -21,12 +21,19 @@ export const emailService = {
   send: async (options: EmailOptions): Promise<void> => {
     // 1. Check if SMTP is configured
     if (!env.SMTP_HOST || !env.SMTP_PORT) {
-      logger.warn({ to: options.to, subject: options.subject }, '⚠️ SMTP not configured — logging email to console instead');
-      console.log('--- MOCK EMAIL START ---');
-      console.log(`To:      ${options.to}`);
-      console.log(`Subject: ${options.subject}`);
-      console.log(`Text:    ${options.text}`);
-      console.log('--- MOCK EMAIL END ---');
+      logger.warn(
+        { to: options.to, subject: options.subject },
+        '⚠️ SMTP not configured — logging email instead',
+      );
+      logger.info(
+        {
+          mockEmail: true,
+          to: options.to,
+          subject: options.subject,
+          text: options.text,
+        },
+        'Mock email (SMTP not configured)',
+      );
       return;
     }
 
@@ -35,10 +42,13 @@ export const emailService = {
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
       secure: env.SMTP_PORT === 465, // true for 465, false for other ports
-      auth: env.SMTP_USER && env.SMTP_PASS ? {
-        user: env.SMTP_USER,
-        pass: env.SMTP_PASS,
-      } : undefined,
+      auth:
+        env.SMTP_USER && env.SMTP_PASS
+          ? {
+              user: env.SMTP_USER,
+              pass: env.SMTP_PASS,
+            }
+          : undefined,
     });
 
     // 3. Send mail

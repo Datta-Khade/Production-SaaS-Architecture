@@ -25,7 +25,7 @@ export const useUsers = () => {
 
   // Mutation: Create user
   const createMutation = useMutation({
-    mutationFn: (data: Partial<User> & { password?: string }) => 
+    mutationFn: (data: Partial<User> & { password?: string }) =>
       apiRequest('POST', '/admin/users', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
@@ -34,7 +34,7 @@ export const useUsers = () => {
 
   // Mutation: Update user
   const updateMutation = useMutation({
-    mutationFn: ({ uuid, data }: { uuid: string; data: Partial<User> }) => 
+    mutationFn: ({ uuid, data }: { uuid: string; data: Partial<User> }) =>
       apiRequest('PATCH', `/admin/users/${uuid}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
@@ -43,8 +43,7 @@ export const useUsers = () => {
 
   // Mutation: Delete user
   const deleteMutation = useMutation({
-    mutationFn: (uuid: string) => 
-      apiRequest('DELETE', `/admin/users/${uuid}`),
+    mutationFn: (uuid: string) => apiRequest('DELETE', `/admin/users/${uuid}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     },

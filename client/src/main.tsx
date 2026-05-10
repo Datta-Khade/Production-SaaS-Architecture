@@ -1,6 +1,6 @@
 /**
  * React Entry Point
- * 
+ *
  * Sets up providers: QueryClient, BrowserRouter
  */
 import React from 'react';
@@ -18,5 +18,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <App />
       </BrowserRouter>
     </QueryClientProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

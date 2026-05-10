@@ -58,7 +58,9 @@ const ResetPasswordPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="w-full max-w-sm text-center bg-white p-8 rounded-xl shadow-xl border border-gray-100">
           <h2 className="text-xl font-bold text-red-600 mb-2">Invalid Link</h2>
-          <p className="text-sm text-gray-500 mb-6">This password reset link is invalid or has expired.</p>
+          <p className="text-sm text-gray-500 mb-6">
+            This password reset link is invalid or has expired.
+          </p>
           <Link to="/login" className="text-sm font-medium text-[#16569e] hover:underline">
             Request a new link
           </Link>
@@ -70,7 +72,10 @@ const ResetPasswordPage: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm">
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-6">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-6"
+        >
           <div className="text-center mb-6">
             <img src={logo} alt="SAIL Logo" className="h-20 w-auto mx-auto mb-4" />
             <h2 className="text-xl font-bold text-gray-900">Reset Password</h2>
@@ -104,13 +109,19 @@ const ResetPasswordPage: React.FC = () => {
                   {...register('new_password')}
                   className={errors.new_password ? 'border-red-500' : ''}
                 />
-                {errors.new_password && <p className="text-xs text-red-500">{errors.new_password.message}</p>}
+                {errors.new_password && (
+                  <p className="text-xs text-red-500">{errors.new_password.message}</p>
+                )}
               </div>
 
               <input type="hidden" {...register('token')} />
               <input type="hidden" {...register('domain')} />
 
-              <Button type="submit" disabled={isLoading} className="w-full h-11 bg-[#16569e] hover:bg-[#1e5fa8]">
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-11 bg-[#16569e] hover:bg-[#1e5fa8]"
+              >
                 {isLoading ? 'Resetting...' : 'Update Password'}
               </Button>
             </>

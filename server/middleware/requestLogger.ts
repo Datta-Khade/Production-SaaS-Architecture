@@ -1,6 +1,6 @@
 /**
  * Request Logger — Pino HTTP middleware with tenant + correlation context
- * 
+ *
  * Every log line automatically includes:
  * { timestamp, level, tenantId, requestId, userId, method, path, statusCode, responseTime }
  */
@@ -11,7 +11,7 @@ import { env } from '../env.js';
 
 export const requestLogger = pinoHttp({
   logger: logger.child({ name: 'express' }),
-  
+
   // Generate a unique request ID for correlation
   genReqId: (req) => {
     const existingId = req.headers['x-request-id'] as string;
@@ -34,12 +34,14 @@ export const requestLogger = pinoHttp({
   },
 
   // Don't log health check requests or Vite noise (too noisy)
-  autoLogging: env.LOG_HTTP_REQUESTS ? {
-    ignore: (req) => {
-      const noisyPaths = ['/api/health', '/@vite/client', '/src/', '/node_modules/'];
-      return noisyPaths.some(path => req.url?.includes(path));
-    },
-  } : false,
+  autoLogging: env.LOG_HTTP_REQUESTS
+    ? {
+        ignore: (req) => {
+          const noisyPaths = ['/api/health', '/@vite/client', '/src/', '/node_modules/'];
+          return noisyPaths.some((path) => req.url?.includes(path));
+        },
+      }
+    : false,
 
   // Custom serializers to reduce log size
   serializers: {

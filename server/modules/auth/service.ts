@@ -13,8 +13,12 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from '../../env.js';
-import type { JwtPayload, UserRole } from '../../middleware/auth.js';
-import { UnauthorizedError, ForbiddenError, ValidationError } from '../../../shared/modules/errors/index.js';
+import type { JwtPayload } from '../../middleware/auth.js';
+import {
+  UnauthorizedError,
+  ForbiddenError,
+  ValidationError,
+} from '../../../shared/modules/errors/index.js';
 import { hashToken } from '../../../shared/modules/lib/encryption.js';
 import { logger } from '../../lib/logger.js';
 import { getRawPool, runWithDb } from '../db.js';
@@ -58,7 +62,7 @@ const generateTokens = (claims: Omit<JwtPayload, 'iat' | 'exp'>): TokenPair => {
   const refreshToken = jwt.sign(
     { sub: claims.sub, type: 'refresh', jti: uuidv4() },
     env.REFRESH_TOKEN_SECRET as string,
-    { expiresIn: env.REFRESH_TOKEN_EXPIRY as any }
+    { expiresIn: env.REFRESH_TOKEN_EXPIRY as any },
   );
 
   return { accessToken, refreshToken };
@@ -67,7 +71,6 @@ const generateTokens = (claims: Omit<JwtPayload, 'iat' | 'exp'>): TokenPair => {
 // ── Auth Service ────────────────────────────────────────────
 
 export const authService = {
-
   /**
    * Authenticate user by username/email + password + domain.
    * Returns token pair + user (without password_hash).
@@ -77,9 +80,8 @@ export const authService = {
     username: string,
     password: string,
     _domain: string,
-    ipAddress?: string
+    ipAddress?: string,
   ): Promise<TokenPair & { user: Omit<DbUser, 'password_hash'> }> => {
-
     const tenantConn = await getTenantByDomain(_domain);
     if (!tenantConn) {
       // Do not reveal if tenant doesn't exist, just return invalid creds
@@ -97,7 +99,7 @@ export const authService = {
        WHERE (username = $1 OR email = $1)
          AND is_deleted = false
        LIMIT 1`,
-        [username]
+        [username],
       );
 
       const user = result.rows[0];
@@ -120,9 +122,7 @@ export const authService = {
 
       // Check account locked
       if (user.locked_until && new Date() < new Date(user.locked_until)) {
-        const minutesLeft = Math.ceil(
-          (new Date(user.locked_until).getTime() - Date.now()) / 60000
-        );
+        const minutesLeft = Math.ceil((new Date(user.locked_until).getTime() - Date.now()) / 60000);
         await auditLog.track({
           actor: { sub: user.uuid, email: user.email },
           action: 'login_failed',
@@ -132,7 +132,7 @@ export const authService = {
           ipAddress,
         });
         throw new ForbiddenError(
-          `Account locked due to too many failed attempts. Try again in ${minutesLeft} minutes.`
+          `Account locked due to too many failed attempts. Try again in ${minutesLeft} minutes.`,
         );
       }
 
@@ -158,7 +158,7 @@ export const authService = {
             newFailCount,
             shouldLock ? new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000) : null,
             user.uuid,
-          ]
+          ],
         );
 
         await auditLog.track({
@@ -172,13 +172,13 @@ export const authService = {
 
         if (shouldLock) {
           throw new ForbiddenError(
-            `Account locked after ${MAX_FAILED_ATTEMPTS} failed attempts. Try again in ${LOCK_DURATION_MINUTES} minutes.`
+            `Account locked after ${MAX_FAILED_ATTEMPTS} failed attempts. Try again in ${LOCK_DURATION_MINUTES} minutes.`,
           );
         }
 
         const attemptsLeft = MAX_FAILED_ATTEMPTS - newFailCount;
         throw new UnauthorizedError(
-          `Invalid credentials. ${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining before lock.`
+          `Invalid credentials. ${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining before lock.`,
         );
       }
 
@@ -187,7 +187,7 @@ export const authService = {
         `UPDATE users_v2
        SET failed_login_count = 0, locked_until = NULL, updated_at = NOW()
        WHERE uuid = $1`,
-        [user.uuid]
+        [user.uuid],
       );
 
       // Generate tokens
@@ -204,7 +204,7 @@ export const authService = {
       await db.query(
         `INSERT INTO refresh_tokens_v2 (user_uuid, token_hash, ip_address, expires_at)
        VALUES ($1, $2, $3, $4)`,
-        [user.uuid, tokenHash, ipAddress ?? null, expiresAt]
+        [user.uuid, tokenHash, ipAddress ?? null, expiresAt],
       );
 
       // Audit successful login
@@ -227,10 +227,7 @@ export const authService = {
    * Validate a refresh token against the DB and issue a new token pair.
    * Rotates the refresh token (old one revoked, new one issued).
    */
-  refresh: async (
-    rawToken: string,
-    ipAddress?: string
-  ): Promise<TokenPair> => {
+  refresh: async (rawToken: string, ipAddress?: string): Promise<TokenPair> => {
     // Verify JWT signature first
     let decoded: { sub: string; type: string };
     try {
@@ -250,7 +247,7 @@ export const authService = {
        FROM refresh_tokens_v2 rt
        JOIN users_v2 u ON u.uuid = rt.user_uuid
        WHERE rt.token_hash = $1`,
-      [tokenHash]
+      [tokenHash],
     );
 
     const tokenRow = result.rows[0];
@@ -266,7 +263,7 @@ export const authService = {
     // Revoke old token
     await db.query(
       `UPDATE refresh_tokens_v2 SET is_revoked = true, updated_at = NOW() WHERE uuid = $1`,
-      [tokenRow.uuid]
+      [tokenRow.uuid],
     );
 
     // Generate new pair
@@ -283,7 +280,7 @@ export const authService = {
     await db.query(
       `INSERT INTO refresh_tokens_v2 (user_uuid, token_hash, ip_address, expires_at)
        VALUES ($1, $2, $3, $4)`,
-      [tokenRow.user_uuid, newHash, ipAddress ?? null, expiresAt]
+      [tokenRow.user_uuid, newHash, ipAddress ?? null, expiresAt],
     );
 
     return { accessToken, refreshToken: newRefreshToken };
@@ -298,7 +295,7 @@ export const authService = {
     await db.query(
       `UPDATE refresh_tokens_v2 SET is_revoked = true, updated_at = NOW()
        WHERE token_hash = $1`,
-      [tokenHash]
+      [tokenHash],
     );
   },
 
@@ -312,7 +309,7 @@ export const authService = {
               failed_login_count, locked_until
        FROM users_v2
        WHERE uuid = $1 AND is_deleted = false`,
-      [userUuid]
+      [userUuid],
     );
 
     const user = result.rows[0];
@@ -329,14 +326,14 @@ export const authService = {
     userUuid: string,
     currentPassword: string,
     newPassword: string,
-    ipAddress?: string
+    ipAddress?: string,
   ): Promise<void> => {
     const db = getRawPool();
 
     const result = await db.query<DbUser>(
       `SELECT uuid, email, password_hash FROM users_v2
        WHERE uuid = $1 AND is_deleted = false`,
-      [userUuid]
+      [userUuid],
     );
 
     const user = result.rows[0];
@@ -346,16 +343,16 @@ export const authService = {
     if (!match) throw new ValidationError('Current password is incorrect');
 
     const newHash = await bcrypt.hash(newPassword, 12);
-    await db.query(
-      `UPDATE users_v2 SET password_hash = $1, updated_at = NOW() WHERE uuid = $2`,
-      [newHash, userUuid]
-    );
+    await db.query(`UPDATE users_v2 SET password_hash = $1, updated_at = NOW() WHERE uuid = $2`, [
+      newHash,
+      userUuid,
+    ]);
 
     // Revoke ALL refresh tokens (force re-login on all devices)
     await db.query(
       `UPDATE refresh_tokens_v2 SET is_revoked = true, updated_at = NOW()
        WHERE user_uuid = $1`,
-      [userUuid]
+      [userUuid],
     );
 
     await auditLog.track({
@@ -386,7 +383,7 @@ export const authService = {
       // 1. Find user by username OR email
       const result = await db.query<{ uuid: string; email: string; is_active: boolean }>(
         'SELECT uuid, email, is_active FROM users_v2 WHERE (username = $1 OR email = $1) AND is_deleted = false LIMIT 1',
-        [username]
+        [username],
       );
 
       const user = result.rows[0];
@@ -406,7 +403,7 @@ export const authService = {
       // 3. Store hashed token in DB
       await db.query(
         'INSERT INTO password_reset_tokens (user_uuid, token_hash, expires_at) VALUES ($1, $2, $3)',
-        [user.uuid, tokenHash, expiresAt]
+        [user.uuid, tokenHash, expiresAt],
       );
 
       // 4. Send email
@@ -439,7 +436,7 @@ export const authService = {
          FROM password_reset_tokens 
          WHERE token_hash = $1 AND is_used = false AND expires_at > NOW()
          LIMIT 1`,
-        [tokenHash]
+        [tokenHash],
       );
 
       const tokenRow = result.rows[0];
@@ -449,19 +446,19 @@ export const authService = {
       const passwordHash = await bcrypt.hash(newPassword, 12);
       await db.query(
         'UPDATE users_v2 SET password_hash = $1, failed_login_count = 0, locked_until = NULL, updated_at = NOW() WHERE uuid = $2',
-        [passwordHash, tokenRow.user_uuid]
+        [passwordHash, tokenRow.user_uuid],
       );
 
       // 3. Mark token as used
       await db.query(
         'UPDATE password_reset_tokens SET is_used = true, updated_at = NOW() WHERE uuid = $1',
-        [tokenRow.uuid]
+        [tokenRow.uuid],
       );
 
       // 4. Revoke all active refresh tokens (security)
       await db.query(
         'UPDATE refresh_tokens_v2 SET is_revoked = true, updated_at = NOW() WHERE user_uuid = $1',
-        [tokenRow.user_uuid]
+        [tokenRow.user_uuid],
       );
 
       await auditLog.track({
@@ -473,4 +470,3 @@ export const authService = {
     });
   },
 };
-

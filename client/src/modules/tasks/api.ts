@@ -17,7 +17,8 @@ export const taskKeys = {
 export const useTasks = (page = 1, limit = 20) => {
   return useQuery({
     queryKey: taskKeys.list({ page, limit }),
-    queryFn: () => tenantFetch<PaginatedResponse<Task>>('GET', `/tasks?page=${page}&limit=${limit}`),
+    queryFn: () =>
+      tenantFetch<PaginatedResponse<Task>>('GET', `/tasks?page=${page}&limit=${limit}`),
   });
 };
 
@@ -42,7 +43,7 @@ export const useCreateTask = () => {
 export const useUpdateTask = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<NewTask> }) => 
+    mutationFn: ({ id, data }: { id: string; data: Partial<NewTask> }) =>
       tenantFetch<ApiResponse<Task>>('PUT', `/tasks/${id}`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
@@ -60,4 +61,3 @@ export const useDeleteTask = () => {
     },
   });
 };
-

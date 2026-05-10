@@ -1,6 +1,6 @@
 /**
  * Login Page — Authentication entry point with 180° Flip Effect
- * 
+ *
  * Includes:
  * - Login View (Front)
  * - Forgot Password View (Back)
@@ -9,9 +9,11 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { 
-  loginSchema, type LoginInput, 
-  forgotPasswordSchema, type ForgotPasswordInput 
+import {
+  loginSchema,
+  type LoginInput,
+  forgotPasswordSchema,
+  type ForgotPasswordInput,
 } from '../../../shared/lib/validators';
 import { setAccessToken, setTenantDomain } from '../../../shared/lib/auth';
 import { getErrorMessage } from '../../../shared/lib/errors';
@@ -100,7 +102,8 @@ const LoginPage: React.FC = () => {
         body: JSON.stringify(data),
       });
       const result = await res.json();
-      if (!res.ok || !result.success) throw new Error(result.message || 'Failed to send reset link');
+      if (!res.ok || !result.success)
+        throw new Error(result.message || 'Failed to send reset link');
       setForgotSuccess(result.message || 'If an account exists, a reset link has been sent.');
       resetForgot();
     } catch (err) {
@@ -117,16 +120,25 @@ const LoginPage: React.FC = () => {
     setForgotSuccess(null);
   };
 
-  const hasError = loginError || Object.keys(loginErrors).length > 0 || forgotError || Object.keys(forgotErrors).length > 0;
+  const hasError =
+    loginError ||
+    Object.keys(loginErrors).length > 0 ||
+    forgotError ||
+    Object.keys(forgotErrors).length > 0;
   const cardHeight = hasError ? 'h-[560px]' : 'h-[500px]';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 perspective-1000 overflow-hidden">
-      <div className={`w-full max-w-sm ${cardHeight} transition-all duration-300 relative flip-card-inner ${isFlipped ? 'flipped' : ''}`}>
-        
+      <div
+        className={`w-full max-w-sm ${cardHeight} transition-all duration-300 relative flip-card-inner ${isFlipped ? 'flipped' : ''}`}
+      >
         {/* --- FRONT: Login --- */}
         <div className="flip-card-front">
-          <form onSubmit={handleSubmitLogin(onLoginSubmit)} className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-4 h-full" noValidate>
+          <form
+            onSubmit={handleSubmitLogin(onLoginSubmit)}
+            className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-4 h-full"
+            noValidate
+          >
             <div className="text-center mb-1">
               <img src={logo} alt="SAIL Logo" className="h-16 w-auto mx-auto mb-1" />
             </div>
@@ -146,7 +158,9 @@ const LoginPage: React.FC = () => {
                 {...registerLogin('username')}
                 className={loginErrors.username ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
-              {loginErrors.username && <p className="text-xs text-red-500">{loginErrors.username.message}</p>}
+              {loginErrors.username && (
+                <p className="text-xs text-red-500">{loginErrors.username.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -159,15 +173,17 @@ const LoginPage: React.FC = () => {
                 className={loginErrors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
               <div className="flex justify-end">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={toggleFlip}
                   className="text-xs text-[#16569e] hover:underline"
                 >
                   Forgot password?
                 </button>
               </div>
-              {loginErrors.password && <p className="text-xs text-red-500">{loginErrors.password.message}</p>}
+              {loginErrors.password && (
+                <p className="text-xs text-red-500">{loginErrors.password.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -179,10 +195,16 @@ const LoginPage: React.FC = () => {
                 {...registerLogin('domain')}
                 className={loginErrors.domain ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
-              {loginErrors.domain && <p className="text-xs text-red-500">{loginErrors.domain.message}</p>}
+              {loginErrors.domain && (
+                <p className="text-xs text-red-500">{loginErrors.domain.message}</p>
+              )}
             </div>
 
-            <Button type="submit" disabled={isLoading} className="w-full h-11 bg-[#16569e] hover:bg-[#1e5fa8] text-white">
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-11 bg-[#16569e] hover:bg-[#1e5fa8] text-white"
+            >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
@@ -190,7 +212,11 @@ const LoginPage: React.FC = () => {
 
         {/* --- BACK: Forgot Password --- */}
         <div className="flip-card-back">
-          <form onSubmit={handleSubmitForgot(onForgotSubmit)} className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-4 h-full" noValidate>
+          <form
+            onSubmit={handleSubmitForgot(onForgotSubmit)}
+            className="bg-white p-8 rounded-xl shadow-xl border border-gray-100 space-y-4 h-full"
+            noValidate
+          >
             <div className="text-center mb-1">
               <img src={logo} alt="SAIL Logo" className="h-16 w-auto mx-auto mb-1" />
               <h2 className="text-lg font-bold text-gray-900">Forgot Password</h2>
@@ -216,7 +242,9 @@ const LoginPage: React.FC = () => {
                 {...registerForgot('username')}
                 className={forgotErrors.username ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
-              {forgotErrors.username && <p className="text-xs text-red-500">{forgotErrors.username.message}</p>}
+              {forgotErrors.username && (
+                <p className="text-xs text-red-500">{forgotErrors.username.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -227,16 +255,22 @@ const LoginPage: React.FC = () => {
                 {...registerForgot('domain')}
                 className={forgotErrors.domain ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
-              {forgotErrors.domain && <p className="text-xs text-red-500">{forgotErrors.domain.message}</p>}
+              {forgotErrors.domain && (
+                <p className="text-xs text-red-500">{forgotErrors.domain.message}</p>
+              )}
             </div>
 
-            <Button type="submit" disabled={isLoading || !!forgotSuccess} className="w-full h-11 bg-[#16569e] hover:bg-[#1e5fa8] text-white">
+            <Button
+              type="submit"
+              disabled={isLoading || !!forgotSuccess}
+              className="w-full h-11 bg-[#16569e] hover:bg-[#1e5fa8] text-white"
+            >
               {isLoading ? 'Sending...' : 'Send Reset Link'}
             </Button>
 
             <div className="text-center">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={toggleFlip}
                 className="text-sm font-medium text-[#16569e] hover:underline"
               >
@@ -245,7 +279,6 @@ const LoginPage: React.FC = () => {
             </div>
           </form>
         </div>
-
       </div>
     </div>
   );

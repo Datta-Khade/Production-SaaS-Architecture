@@ -30,7 +30,10 @@ class SecureStorageAPI {
       const encrypted = encrypt(stringified);
       this.storage.setItem(key, encrypted);
     } catch (e) {
-      console.warn(`[SecureStorage] Failed to save to ${this.type}Storage, falling back to memory`, e);
+      console.warn(
+        `[SecureStorage] Failed to save to ${this.type}Storage, falling back to memory`,
+        e,
+      );
       // Fallback to memory if storage is full or disabled (e.g., incognito)
       const stringified = JSON.stringify(value);
       this.memoryFallback.set(key, encrypt(stringified));
@@ -94,4 +97,3 @@ class SecureStorageAPI {
 
 export const SecureLocalStorage = new SecureStorageAPI('local');
 export const SecureSessionStorage = new SecureStorageAPI('session');
-

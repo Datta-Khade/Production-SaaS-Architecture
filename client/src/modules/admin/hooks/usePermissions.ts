@@ -17,15 +17,17 @@ export interface Permission {
 export const usePermissions = (roleUuid: string | null) => {
   const query = useQuery({
     queryKey: ['admin', 'permissions', roleUuid],
-    queryFn: () => 
-      roleUuid 
-        ? apiRequest<any>('GET', `/admin/permissions/${roleUuid}`).then((res) => res.data as Permission[])
+    queryFn: () =>
+      roleUuid
+        ? apiRequest<any>('GET', `/admin/permissions/${roleUuid}`).then(
+            (res) => res.data as Permission[],
+          )
         : Promise.resolve([]),
     enabled: !!roleUuid,
   });
 
   const saveMutation = useMutation({
-    mutationFn: (permissions: Partial<Permission>[]) => 
+    mutationFn: (permissions: Partial<Permission>[]) =>
       apiRequest('POST', `/admin/permissions/${roleUuid}`, permissions),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'permissions', roleUuid] });

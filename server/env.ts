@@ -1,9 +1,9 @@
 /**
  * Environment Variable Validation — THE BOOT GATE
- * 
+ *
  * The app REFUSES to start if any required env var is missing or malformed.
  * No "undefined" surprises deep in a request handler.
- * 
+ *
  * Usage: import { env } from './env.js' — guaranteed to be valid after boot.
  */
 import { z } from 'zod';
@@ -16,7 +16,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.development') }); // Fal
 
 const envSchema = z.object({
   // App
-  NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
+  NODE_ENV: z.enum(['development', 'staging', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3009),
   APP_URL: z.string().url().default('http://localhost:5005'),
 
@@ -33,16 +33,27 @@ const envSchema = z.object({
   REFRESH_TOKEN_EXPIRY: z.string().default('7d'),
 
   // Redis
+  REDIS_ENABLED: z
+    .preprocess((val) => val === 'true' || val === '1' || val === true, z.boolean())
+    .default(true),
   REDIS_URL: z.string().default('redis://localhost:6379'),
 
   // Feature Flags
-  AUTH_BYPASS: z.preprocess((val) => val === 'true' || val === '1' || val === true, z.boolean()).default(false),
-  MULTI_TENANT: z.preprocess((val) => val === 'true' || val === '1' || val === true, z.boolean()).default(true),
+  AUTH_BYPASS: z
+    .preprocess((val) => val === 'true' || val === '1' || val === true, z.boolean())
+    .default(false),
+  MULTI_TENANT: z
+    .preprocess((val) => val === 'true' || val === '1' || val === true, z.boolean())
+    .default(true),
 
   // Logging
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
-  LOG_PRETTY: z.preprocess((val) => val === 'true' || val === '1' || val === true, z.boolean()).default(false),
-  LOG_HTTP_REQUESTS: z.preprocess((val) => val === 'true' || val === '1' || val === true, z.boolean()).default(true),
+  LOG_PRETTY: z
+    .preprocess((val) => val === 'true' || val === '1' || val === true, z.boolean())
+    .default(false),
+  LOG_HTTP_REQUESTS: z
+    .preprocess((val) => val === 'true' || val === '1' || val === true, z.boolean())
+    .default(true),
 
   // Rate Limiting
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().default(60000),

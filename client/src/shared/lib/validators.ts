@@ -24,4 +24,3 @@ export type {
   PaginatedResponse,
   PaginationMeta,
 } from '@shared/modules/validators/common';
-

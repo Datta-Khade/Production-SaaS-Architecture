@@ -1,6 +1,6 @@
 /**
  * Custom Error Classes — MANDATORY for all service-layer errors
- * 
+ *
  * These are caught by globalErrorHandler and mapped to consistent HTTP responses.
  * NEVER throw raw `new Error()` — always use these specific classes.
  * Stack traces are NEVER sent to the client.
@@ -15,7 +15,13 @@ export class AppError extends Error {
     super(message);
     this.name = this.constructor.name;
     this.statusCode = statusCode;
-    this.code = code || this.name.replace(/Error$/, '').toUpperCase().replace(/([A-Z])/g, '_$1').replace(/^_/, '');
+    this.code =
+      code ||
+      this.name
+        .replace(/Error$/, '')
+        .toUpperCase()
+        .replace(/([A-Z])/g, '_$1')
+        .replace(/^_/, '');
     this.isOperational = true;
     Error.captureStackTrace(this, this.constructor);
   }

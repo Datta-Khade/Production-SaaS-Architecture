@@ -17,11 +17,11 @@ const getKey = (): string => {
   if (typeof process !== 'undefined' && process.env && process.env.ENCRYPTION_KEY) {
     return process.env.ENCRYPTION_KEY;
   }
-  
+
   // Check if we are in Vite (Browser)
-  // @ts-ignore
+  // @ts-expect-error - import.meta is available in Vite but not Node
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_STORAGE_KEY) {
-    // @ts-ignore
+    // @ts-expect-error - import.meta.env is available in Vite
     return import.meta.env.VITE_STORAGE_KEY as string;
   }
 
@@ -46,7 +46,7 @@ export const decrypt = (ciphertext: string, overrideKey?: string): string | null
     const key = overrideKey || getKey();
     const bytes = CryptoJS.AES.decrypt(ciphertext, key);
     const decryptedData = bytes.toString(CryptoJS.enc.Utf8);
-    
+
     // If decryption fails due to bad key, it usually returns an empty string
     return decryptedData || null;
   } catch {

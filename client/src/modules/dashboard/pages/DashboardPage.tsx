@@ -1,6 +1,6 @@
 /**
  * Dashboard Page — Main landing page after login
- * 
+ *
  * Phase 1 skeleton — shows system status and placeholder metric cards.
  * Will be enhanced with real data in Phase 3.
  */
@@ -49,25 +49,27 @@ const DashboardPage: React.FC = () => {
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-neutral-500">Server Status</span>
-            <span className={`w-2.5 h-2.5 rounded-full ${
-              health?.status === 'ok' ? 'bg-green-500' : 'bg-yellow-500'
-            } animate-pulse`} />
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                health?.status === 'ok' ? 'bg-green-500' : 'bg-yellow-500'
+              } animate-pulse`}
+            />
           </div>
           <p className="text-2xl font-bold text-neutral-900">
             {isLoading ? '...' : health?.status === 'ok' ? 'Healthy' : 'Degraded'}
           </p>
-          <p className="text-xs text-neutral-400 mt-1">
-            v{health?.version || '1.0.0'}
-          </p>
+          <p className="text-xs text-neutral-400 mt-1">v{health?.version || '1.0.0'}</p>
         </div>
 
         {/* Database */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-neutral-500">Database</span>
-            <span className={`w-2.5 h-2.5 rounded-full ${
-              health?.checks.masterDb === 'ok' ? 'bg-green-500' : 'bg-red-500'
-            }`} />
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                health?.checks.masterDb === 'ok' ? 'bg-green-500' : 'bg-red-500'
+              }`}
+            />
           </div>
           <p className="text-2xl font-bold text-neutral-900">
             {isLoading ? '...' : health?.checks.masterDb === 'ok' ? 'Connected' : 'Error'}
@@ -79,9 +81,11 @@ const DashboardPage: React.FC = () => {
         <div className="card p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-neutral-500">Cache (Redis)</span>
-            <span className={`w-2.5 h-2.5 rounded-full ${
-              health?.checks.redis === 'ok' ? 'bg-green-500' : 'bg-red-500'
-            }`} />
+            <span
+              className={`w-2.5 h-2.5 rounded-full ${
+                health?.checks.redis === 'ok' ? 'bg-green-500' : 'bg-red-500'
+              }`}
+            />
           </div>
           <p className="text-2xl font-bold text-neutral-900">
             {isLoading ? '...' : health?.checks.redis === 'ok' ? 'Connected' : 'Error'}
@@ -98,15 +102,15 @@ const DashboardPage: React.FC = () => {
           <p className="text-2xl font-bold text-neutral-900">
             {isLoading ? '...' : formatUptime(health?.uptime || 0)}
           </p>
-          <p className="text-xs text-neutral-400 mt-1">
-            {health?.environment || 'development'}
-          </p>
+          <p className="text-xs text-neutral-400 mt-1">{health?.environment || 'development'}</p>
         </div>
       </div>
 
       {/* Architecture Info */}
       <div className="card p-6">
-        <h2 className="text-lg font-semibold text-neutral-900 mb-4">Phase 1 — Skeleton Complete ✅</h2>
+        <h2 className="text-lg font-semibold text-neutral-900 mb-4">
+          Phase 1 — Skeleton Complete ✅
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div className="space-y-2">
             <h3 className="font-medium text-neutral-700">✅ Infrastructure</h3>
@@ -151,8 +155,8 @@ const DashboardPage: React.FC = () => {
       <div className="card p-6 border-primary-200 bg-primary-50/50">
         <h2 className="text-lg font-semibold text-primary-900 mb-2">Next: Phase 2 — UI Design</h2>
         <p className="text-sm text-primary-700">
-          Take screenshots of this skeleton, then iterate the UI design using Claude.
-          Build the design system before adding feature data.
+          Take screenshots of this skeleton, then iterate the UI design using Claude. Build the
+          design system before adding feature data.
         </p>
       </div>
     </div>

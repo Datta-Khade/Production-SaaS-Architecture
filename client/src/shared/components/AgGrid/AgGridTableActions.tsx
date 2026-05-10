@@ -23,25 +23,25 @@ export const AgGridTableActions: React.FC<AgGridTableActionsProps> = ({
   showGroupButtons = true,
   showSelectionButtons = false,
   customButtons,
-  exportFilename = 'data'
+  exportFilename = 'data',
 }) => {
   const { toast } = useToast();
-  
+
   if (!gridApi) return null;
 
   return (
     <div className={`flex gap-2 flex-wrap ${className}`}>
       {showExportButtons && (
         <>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="h-8 text-[#8798ad] text-xs border-[#e1e8ed]"
             onClick={() => agGridUtils.exportToCsv(gridApi, `${exportFilename}.csv`)}
           >
             Export CSV
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="h-8 text-[#8798ad] text-xs border-[#e1e8ed]"
             onClick={() => agGridUtils.exportToExcel(gridApi, `${exportFilename}.xlsx`)}
           >
@@ -49,34 +49,34 @@ export const AgGridTableActions: React.FC<AgGridTableActionsProps> = ({
           </Button>
         </>
       )}
-      
+
       {showFilterButtons && (
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="h-8 text-[#8798ad] text-xs border-[#e1e8ed]"
           onClick={() => agGridUtils.clearFilters(gridApi)}
         >
           Clear Filters
         </Button>
       )}
-      
+
       {showGroupButtons && (
         <>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="h-8 text-[#8798ad] text-xs border-[#e1e8ed]"
             onClick={() => {
               if (agGridUtils.hasRowGroups(gridApi)) {
                 agGridUtils.expandAllGroups(gridApi);
                 toast({
-                  title: "Groups Expanded",
-                  description: "All row groups have been expanded."
+                  title: 'Groups Expanded',
+                  description: 'All row groups have been expanded.',
                 });
               } else {
                 toast({
-                  title: "No Row Groups",
-                  description: "Drag a column to the Row Groups panel to create groups first.",
-                  variant: "destructive"
+                  title: 'No Row Groups',
+                  description: 'Drag a column to the Row Groups panel to create groups first.',
+                  variant: 'destructive',
                 });
               }
             }}
@@ -84,21 +84,21 @@ export const AgGridTableActions: React.FC<AgGridTableActionsProps> = ({
           >
             Expand All
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="h-8 text-[#8798ad] text-xs border-[#e1e8ed]"
             onClick={() => {
               if (agGridUtils.hasRowGroups(gridApi)) {
                 agGridUtils.collapseAllGroups(gridApi);
                 toast({
-                  title: "Groups Collapsed",
-                  description: "All row groups have been collapsed."
+                  title: 'Groups Collapsed',
+                  description: 'All row groups have been collapsed.',
                 });
               } else {
                 toast({
-                  title: "No Row Groups",
-                  description: "Drag a column to the Row Groups panel to create groups first.",
-                  variant: "destructive"
+                  title: 'No Row Groups',
+                  description: 'Drag a column to the Row Groups panel to create groups first.',
+                  variant: 'destructive',
                 });
               }
             }}
@@ -108,18 +108,18 @@ export const AgGridTableActions: React.FC<AgGridTableActionsProps> = ({
           </Button>
         </>
       )}
-      
+
       {showSelectionButtons && (
         <>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="h-8 text-[#8798ad] text-xs border-[#e1e8ed]"
             onClick={() => agGridUtils.selectAll(gridApi)}
           >
             Select All
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="h-8 text-[#8798ad] text-xs border-[#e1e8ed]"
             onClick={() => agGridUtils.deselectAll(gridApi)}
           >
@@ -127,7 +127,7 @@ export const AgGridTableActions: React.FC<AgGridTableActionsProps> = ({
           </Button>
         </>
       )}
-      
+
       {customButtons}
     </div>
   );

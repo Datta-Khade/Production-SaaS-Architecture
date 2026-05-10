@@ -26,11 +26,8 @@ export default function UITestPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HeaderComponent showSidebarToggle onSidebarToggle={() => { }} />
-      <SideBarComponent
-        selectedAdminPage={selectedPage}
-        setSelectedAdminPage={setSelectedPage}
-      />
+      <HeaderComponent showSidebarToggle onSidebarToggle={() => {}} />
+      <SideBarComponent selectedAdminPage={selectedPage} setSelectedAdminPage={setSelectedPage} />
 
       <main className="pt-[80px] pl-[80px] pr-8 pb-8">
         <div className="max-w-6xl mx-auto space-y-8">

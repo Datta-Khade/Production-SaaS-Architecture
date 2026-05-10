@@ -1,14 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Shield, 
-  ChevronRight, 
-  ChevronDown, 
-  Save, 
-  Lock,
-  LayoutGrid,
-  Search
-} from 'lucide-react';
-import { useRoles, Role } from '../hooks/useRoles';
+import { ChevronRight, ChevronDown, Save, Lock } from 'lucide-react';
+import { useRoles } from '../hooks/useRoles';
 import { useMenus, Menu } from '../hooks/useMenus';
 import { usePermissions, Permission } from '../hooks/usePermissions';
 import { Button } from '@/shared/components/ui/button';
@@ -23,23 +15,31 @@ const AccessControlPage: React.FC = () => {
   const { toast } = useToast();
   const { data: roles = [], isLoading: isLoadingRoles } = useRoles();
   const { data: menus = [], isLoading: isLoadingMenus } = useMenus();
-  
+
   const [selectedRoleUuid, setSelectedRoleUuid] = useState<string | null>(null);
-  const { permissions, isLoading: isLoadingPerms, savePermissions, isSaving } = usePermissions(selectedRoleUuid);
+  const {
+    permissions,
+    isLoading: isLoadingPerms,
+    savePermissions,
+    isSaving,
+  } = usePermissions(selectedRoleUuid);
 
   const [localPermissions, setLocalPermissions] = useState<Record<string, Permission>>({});
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
 
   // ── Initialize Local State ───────────────────────────────────
+  const isInitialized = React.useRef(false);
   useEffect(() => {
-    if (roles.length > 0 && !selectedRoleUuid) {
+    if (roles.length > 0 && !isInitialized.current) {
       setSelectedRoleUuid(roles[0].ruid);
+      isInitialized.current = true;
     }
-  }, [roles, selectedRoleUuid]);
+  }, [roles]);
 
   useEffect(() => {
+    if (!permissions) return;
     const permMap: Record<string, Permission> = {};
-    permissions.forEach(p => {
+    permissions.forEach((p) => {
       permMap[p.menu_uuid] = { ...p };
     });
     setLocalPermissions(permMap);
@@ -50,11 +50,11 @@ const AccessControlPage: React.FC = () => {
     const nodeMap: Record<string, MenuNode> = {};
     const roots: MenuNode[] = [];
 
-    menus.forEach(m => {
+    menus.forEach((m) => {
       nodeMap[m.muid] = { ...m, children: [] };
     });
 
-    menus.forEach(m => {
+    menus.forEach((m) => {
       const node = nodeMap[m.muid];
       if (m.parent_menu && nodeMap[m.parent_menu]) {
         nodeMap[m.parent_menu].children.push(node);
@@ -68,7 +68,7 @@ const AccessControlPage: React.FC = () => {
 
   // ── Handlers ────────────────────────────────────────────────
   const togglePermission = (menuUuid: string, field: keyof Permission) => {
-    setLocalPermissions(prev => {
+    setLocalPermissions((prev) => {
       const current = prev[menuUuid] || {
         menu_uuid: menuUuid,
         role_uuid: selectedRoleUuid!,
@@ -87,7 +87,7 @@ const AccessControlPage: React.FC = () => {
         updated.canedit = false;
         updated.candelete = false;
       }
-      
+
       // If any other permission is enabled, viewing MUST be enabled
       if (field !== 'canview' && newValue) {
         updated.canview = true;
@@ -98,10 +98,11 @@ const AccessControlPage: React.FC = () => {
   };
 
   const toggleAll = (menuUuid: string) => {
-    setLocalPermissions(prev => {
+    setLocalPermissions((prev) => {
       const current = prev[menuUuid];
-      const isAllSelected = current?.canview && current?.cancreate && current?.canedit && current?.candelete;
-      
+      const isAllSelected =
+        current?.canview && current?.cancreate && current?.canedit && current?.candelete;
+
       const updated = {
         menu_uuid: menuUuid,
         role_uuid: selectedRoleUuid!,
@@ -129,21 +130,39 @@ const AccessControlPage: React.FC = () => {
   // ── Render Helpers ──────────────────────────────────────────
   const renderMenuRow = (node: MenuNode, level: number = 0) => {
     const isExpanded = expandedMenus[node.muid];
-    const perm = localPermissions[node.muid] || { canview: false, cancreate: false, canedit: false, candelete: false };
+    const perm = localPermissions[node.muid] || {
+      canview: false,
+      cancreate: false,
+      canedit: false,
+      candelete: false,
+    };
     const hasChildren = node.children.length > 0;
 
     return (
       <React.Fragment key={node.muid}>
-        <div className={`grid grid-cols-12 border-b border-gray-100 hover:bg-gray-50 items-center min-h-[48px] ${level > 0 ? 'bg-gray-50/30' : ''}`}>
-          <div className="col-span-4 flex items-center gap-2 px-4" style={{ paddingLeft: `${(level * 24) + 16}px` }}>
+        <div
+          className={`grid grid-cols-12 border-b border-gray-100 hover:bg-gray-50 items-center min-h-[48px] ${level > 0 ? 'bg-gray-50/30' : ''}`}
+        >
+          <div
+            className="col-span-4 flex items-center gap-2 px-4"
+            style={{ paddingLeft: `${level * 24 + 16}px` }}
+          >
             {hasChildren ? (
-              <button onClick={() => setExpandedMenus(prev => ({ ...prev, [node.muid]: !isExpanded }))}>
-                {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+              <button
+                onClick={() => setExpandedMenus((prev) => ({ ...prev, [node.muid]: !isExpanded }))}
+              >
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                )}
               </button>
             ) : (
               <div className="w-4" />
             )}
-            <span className={`text-sm ${level === 0 ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+            <span
+              className={`text-sm ${level === 0 ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}
+            >
               {node.display_name}
             </span>
           </div>
@@ -151,8 +170,8 @@ const AccessControlPage: React.FC = () => {
           <div className="col-span-8 grid grid-cols-5 gap-4 items-center h-full px-4 text-center">
             {/* Select All */}
             <div className="flex justify-center">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 checked={perm.canview && perm.cancreate && perm.canedit && perm.candelete}
                 onChange={() => toggleAll(node.muid)}
@@ -160,8 +179,8 @@ const AccessControlPage: React.FC = () => {
             </div>
             {/* View */}
             <div className="flex justify-center">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 checked={perm.canview}
                 onChange={() => togglePermission(node.muid, 'canview')}
@@ -169,8 +188,8 @@ const AccessControlPage: React.FC = () => {
             </div>
             {/* Create */}
             <div className="flex justify-center">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 checked={perm.cancreate}
                 onChange={() => togglePermission(node.muid, 'cancreate')}
@@ -178,8 +197,8 @@ const AccessControlPage: React.FC = () => {
             </div>
             {/* Edit */}
             <div className="flex justify-center">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 checked={perm.canedit}
                 onChange={() => togglePermission(node.muid, 'canedit')}
@@ -187,8 +206,8 @@ const AccessControlPage: React.FC = () => {
             </div>
             {/* Delete */}
             <div className="flex justify-center">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 checked={perm.candelete}
                 onChange={() => togglePermission(node.muid, 'candelete')}
@@ -196,7 +215,7 @@ const AccessControlPage: React.FC = () => {
             </div>
           </div>
         </div>
-        {hasChildren && isExpanded && node.children.map(child => renderMenuRow(child, level + 1))}
+        {hasChildren && isExpanded && node.children.map((child) => renderMenuRow(child, level + 1))}
       </React.Fragment>
     );
   };
@@ -221,14 +240,16 @@ const AccessControlPage: React.FC = () => {
             {isLoadingRoles ? (
               <div className="p-4 text-center text-gray-400 text-sm">Loading roles...</div>
             ) : (
-              roles.map(role => (
+              roles.map((role) => (
                 <button
                   key={role.ruid}
                   onClick={() => setSelectedRoleUuid(role.ruid)}
                   className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors border-b border-gray-50
-                    ${selectedRoleUuid === role.ruid 
-                      ? 'bg-blue-50 text-[#16569e] border-l-4 border-l-[#5DADE2]' 
-                      : 'text-gray-600 hover:bg-gray-50'}`}
+                    ${
+                      selectedRoleUuid === role.ruid
+                        ? 'bg-blue-50 text-[#16569e] border-l-4 border-l-[#5DADE2]'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
                 >
                   {role.assigned_role.charAt(0).toUpperCase() + role.assigned_role.slice(1)}
                 </button>
@@ -242,9 +263,13 @@ const AccessControlPage: React.FC = () => {
           <div className="grid grid-cols-12 bg-[#5DADE2] text-white font-bold h-12 items-center px-0">
             <div className="col-span-4 px-4 border-r border-white/20">Menu Name</div>
             <div className="col-span-8 grid grid-cols-5 gap-4 text-center text-[10px] uppercase tracking-wider">
-              <div className="flex items-center justify-center border-r border-white/20">Select All</div>
+              <div className="flex items-center justify-center border-r border-white/20">
+                Select All
+              </div>
               <div className="flex items-center justify-center border-r border-white/20">View</div>
-              <div className="flex items-center justify-center border-r border-white/20">Create</div>
+              <div className="flex items-center justify-center border-r border-white/20">
+                Create
+              </div>
               <div className="flex items-center justify-center border-r border-white/20">Edit</div>
               <div className="flex items-center justify-center">Delete</div>
             </div>
@@ -254,13 +279,13 @@ const AccessControlPage: React.FC = () => {
             {isLoadingMenus || isLoadingPerms ? (
               <div className="p-8 text-center text-gray-400">Loading permissions...</div>
             ) : (
-              menuTree.map(root => renderMenuRow(root))
+              menuTree.map((root) => renderMenuRow(root))
             )}
           </div>
 
           <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
-            <Button 
-              onClick={handleSave} 
+            <Button
+              onClick={handleSave}
               disabled={isSaving || !selectedRoleUuid}
               className="bg-[#5DADE2] hover:bg-[#4a9cd1] text-white px-8 font-semibold shadow-sm transition-all active:scale-95"
             >

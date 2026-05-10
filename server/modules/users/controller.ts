@@ -8,7 +8,7 @@ export const usersController = {
   /**
    * GET /api/v2/admin/users
    */
-  getAll: async (req: Request, res: Response) => {
+  getAll: async (_req: Request, res: Response) => {
     const users = await usersService.getAllUsers();
     res.json({ success: true, data: users });
   },

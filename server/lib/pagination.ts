@@ -1,6 +1,6 @@
 /**
  * Pagination Utilities — Hard gate against unbounded queries
- * 
+ *
  * normalizePagination() enforces max page size at the utility level.
  * No feature can accidentally OOM the server with an unbounded list.
  */

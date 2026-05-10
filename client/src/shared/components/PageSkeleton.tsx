@@ -1,6 +1,6 @@
 /**
  * Page Skeleton — Loading fallback for Suspense
- * 
+ *
  * Shown while lazy-loaded modules are loading.
  * Mimics the general page layout with animated placeholders.
  */

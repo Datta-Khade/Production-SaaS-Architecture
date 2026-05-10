@@ -1,9 +1,9 @@
 /**
  * Authentication Middleware — JWT verification + role-based access control
- * 
+ *
  * authenticate: Verify JWT from Authorization header, attach req.user
  * requireRole: Enforce minimum role level (superadmin > admin > manager > user)
- * 
+ *
  * Rules:
  * - Role checks happen ONLY in middleware, NEVER in service or repository
  * - Never derive permissions from request body — always from verified JWT
@@ -13,14 +13,14 @@ import jwt from 'jsonwebtoken';
 import { env } from '../env.js';
 import { UnauthorizedError, ForbiddenError } from '../../shared/modules/errors/index.js';
 
-import { accessControlRepository } from '../modules/access_control/repository.js';
+import { accessControlRepository } from '@server/modules/access_control/repository';
 import { logger } from '../lib/logger.js';
 
 export interface JwtPayload {
-  sub: string;       // userUuid
+  sub: string; // userUuid
   email: string;
-  role: string;      // Now dynamic from rolemaster
-  domain: string;    // tenant domain — fallback tenant resolution
+  role: string; // Now dynamic from rolemaster
+  domain: string; // tenant domain — fallback tenant resolution
   iat: number;
   exp: number;
   tenantId?: string;
@@ -36,15 +36,23 @@ let roleHierarchyCache: Record<string, number> | null = null;
 let lastCacheUpdate = 0;
 const CACHE_TTL = 1000 * 60 * 5; // 5 minutes
 
+/**
+ * Reset the role hierarchy cache — ONLY FOR TESTING
+ */
+export const resetRoleHierarchyCache = () => {
+  roleHierarchyCache = null;
+  lastCacheUpdate = 0;
+};
+
 const getRoleHierarchy = async (): Promise<Record<string, number>> => {
-  if (roleHierarchyCache && (Date.now() - lastCacheUpdate < CACHE_TTL)) {
+  if (roleHierarchyCache && Date.now() - lastCacheUpdate < CACHE_TTL) {
     return roleHierarchyCache;
   }
 
   try {
     const roles = await accessControlRepository.getAllRoles();
     const hierarchy: Record<string, number> = {};
-    roles.forEach(r => {
+    roles.forEach((r) => {
       hierarchy[r.assigned_role] = r.orderby ?? 0;
     });
     roleHierarchyCache = hierarchy;
@@ -64,9 +72,9 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
   // Allow auth bypass in development (NEVER in production)
   if (env.AUTH_BYPASS && env.NODE_ENV === 'development') {
     req.user = {
-      sub:    'dev-user-uuid',
-      email:  'admin@dev.localhost',
-      role:   'superadmin',
+      sub: 'dev-user-uuid',
+      email: 'admin@dev.localhost',
+      role: 'superadmin',
       domain: 'dev.localhost',
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + 3600,
@@ -100,7 +108,7 @@ export const authenticate = (req: Request, _res: Response, next: NextFunction): 
 /**
  * Require a minimum role level for the route.
  * Must be used AFTER authenticate middleware.
- * 
+ *
  * Usage: requireRole('admin') — allows admin and superadmin
  */
 export const requireRole = (minimumRole: string) => {
@@ -119,10 +127,11 @@ export const requireRole = (minimumRole: string) => {
     const requiredLevel = hierarchy[minimumRole];
 
     if (userLevel === undefined || userLevel < requiredLevel) {
-      throw new ForbiddenError(`Insufficient permissions. Required: ${minimumRole}, Current: ${req.user.role}`);
+      throw new ForbiddenError(
+        `Insufficient permissions. Required: ${minimumRole}, Current: ${req.user.role}`,
+      );
     }
 
     next();
   };
 };
-

@@ -1,6 +1,6 @@
 /**
  * Pino Logger — Structured JSON logging with tenant context
- * 
+ *
  * NEVER use console.log in server code — always use logger or req.log
  * Every log line automatically includes: timestamp, level, tenantId, requestId, userId
  */

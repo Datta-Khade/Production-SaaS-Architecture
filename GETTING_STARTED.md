@@ -6,7 +6,7 @@ This document provides step-by-step instructions to set up and run the **Product
 
 - **Node.js**: v20.0.0 or higher
 - **PostgreSQL**: Installed and running
-- **Redis** (Optional but recommended): For caching and background jobs
+- **Redis** (Optional): For caching and background jobs. Controlled by `REDIS_ENABLED`.
 
 ---
 
@@ -16,8 +16,6 @@ The project uses a **database-per-tenant** architecture. You need to create at l
 
 1.  **Master Database**: Manages tenant registrations and global settings.
 2.  **Tenant Database**: A dedicated database for the development tenant.
-
-Run the following SQL commands in your PostgreSQL terminal:
 
 ```sql
 CREATE DATABASE master_db;
@@ -29,11 +27,13 @@ CREATE DATABASE tenant_db;
 ## 2. Environment Configuration
 
 1.  Copy the example environment file:
+
     ```bash
     cp .env.example .env.development
     ```
 
 2.  Open `.env.development` and update the connection strings:
+
     ```env
     # Database — Master
     MASTER_DATABASE_URL=postgres://postgres:yourpassword@localhost:5432/master_db
@@ -42,79 +42,96 @@ CREATE DATABASE tenant_db;
     DATABASE_URL=postgres://postgres:yourpassword@localhost:5432/tenant_db
     ```
 
-3.  Generate an **Encryption Key** (required for secure data storage):
-    Run this command in your terminal:
+3.  **Generate an Encryption Key** (CRITICAL):
+    The system encrypts tenant database URLs at rest using AES-256-GCM.
     ```bash
     node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
     ```
     Copy the 64-character output and set it as `ENCRYPTION_KEY` in your `.env.development`.
 
-4.  Set `JWT_SECRET` and `REFRESH_TOKEN_SECRET` to any secure random strings.
+---
+
+## 3. Tenant Provisioning & Encryption
+
+### Provisioning a New Tenant
+
+To add a new tenant to the system, use the provisioning script:
+
+```bash
+npm run tenant:create -- --name "Acme Corp" --domain "acme.localhost" --email "admin@acme.com"
+```
+
+This script automatically:
+
+1. Creates the tenant database.
+2. Runs all required migrations.
+3. Registers the tenant in the master DB with an **encrypted** `db_url`.
+4. Creates an initial admin user for the tenant.
+
+### Encrypting Existing DB URLs
+
+If you have unencrypted (plaintext) `db_url` values in your `tenants` table, run the migration script:
+
+```bash
+npx tsx scripts/encryptExistingDbUrls.ts
+```
 
 ---
 
-## 3. Database Initialization
+## 4. Application Initialization
 
 Run the following commands to set up the schema and create initial test data:
 
 ```bash
-# 1. Install dependencies (if not already done)
+# 1. Install dependencies
 npm install
 
-# 2. Run migrations (creates tables in both master and tenant DBs)
+# 2. Run migrations
 npm run db:migrate
 
-# 3. Seed data (creates a test tenant and users)
+# 3. Seed test data
 npm run db:seed
 ```
 
 ---
 
-## 4. Running the Application
+## 5. Running & Testing
 
-Start the development server (Backend + Frontend via Vite):
+### Development Mode
+
+Starts the Backend (Express) and Frontend (Vite) concurrently:
 
 ```bash
 npm run dev
 ```
 
-The application will be available at: **[http://localhost:3009](http://localhost:3009)**
+- **App URL**: [http://localhost:5005](http://localhost:5005)
+- **Health Check**: [http://localhost:5005/api/v2/health](http://localhost:5005/api/v2/health)
 
----
+### Testing
 
-## 5. Default Credentials
+The project uses Vitest for unit and integration testing.
 
-The `db:seed` script creates the following test account for the `dev.localhost` domain:
+```bash
+# Run all tests
+npm test
 
--   **Domain**: `dev.localhost`
--   **Username**: `admin@dev.localhost`
--   **Password**: `Admin@1234`
-
----
-
-## 6. Email Configuration (Optional)
-
-To enable email functionality (like Password Reset) during development, we recommend using **Mailtrap**:
-
-1.  Log in to **[Mailtrap](https://mailtrap.io/)**.
-2.  Go to **Email Testing** > **Inboxes** > **My Inbox**.
-3.  Click the **SMTP Settings** tab.
-4.  Copy the **Username** and **Password**.
-5.  Update your `.env.development`:
-    ```env
-    SMTP_USER=your_mailtrap_username
-    SMTP_PASS=your_mailtrap_password
-    ```
-6.  Restart the server (`npm run dev`).
+# Run tests with coverage
+npm test -- --coverage
+```
 
 ---
 
 ## 🛠️ Common Scripts
 
-| Command | Description |
-| :--- | :--- |
-| `npm run dev` | Starts server and client in development mode |
-| `npm run db:migrate` | Runs all pending SQL migrations |
-| `npm run db:seed` | Populates the database with test data |
-| `npm run build` | Builds the project for production |
-| `npm test` | Runs the test suite |
+| Command                                    | Description                     | Example Usage                                                      |
+| :----------------------------------------- | :------------------------------ | :----------------------------------------------------------------- |
+| `npm run dev`                              | Starts server and client (Vite) | `npm run dev`                                                      |
+| `npm run tenant:create`                    | Provisions a new tenant DB      | `npm run tenant:create -- --name "Acme" --domain "acme.localhost"` |
+| `npm run db:migrate`                       | Runs SQL migrations             | `npm run db:migrate`                                               |
+| `npm run db:seed`                          | Populates test data             | `npm run db:seed`                                                  |
+| `npm run build`                            | Builds for production           | `npm run build`                                                    |
+| `npm test`                                 | Runs all tests (Vitest)         | `npm test`                                                         |
+| `npm run lint`                             | Runs ESLint checks              | `npm run lint`                                                     |
+| `npm run lint:fix`                         | Fixes linting/formatting        | `npm run lint:fix`                                                 |
+| `npx tsx scripts/encryptExistingDbUrls.ts` | Encrypts legacy DB URLs         | `npx tsx scripts/encryptExistingDbUrls.ts`                         |

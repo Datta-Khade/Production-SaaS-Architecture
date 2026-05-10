@@ -11,7 +11,7 @@ import { z } from 'zod';
 // ============================================================
 
 export const paginationSchema = z.object({
-  page:  z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
@@ -43,28 +43,28 @@ export const nameSchema = z
 export const loginSchema = z.object({
   username: z.string().min(1, 'Username is required').max(255),
   password: z.string().min(1, 'Password is required'),
-  domain:   z.string().min(1, 'Domain is required').max(100),
+  domain: z.string().min(1, 'Domain is required').max(100),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export const changePasswordSchema = z.object({
   current_password: z.string().min(1, 'Current password is required'),
-  new_password:     passwordSchema,
+  new_password: passwordSchema,
 });
 
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 export const forgotPasswordSchema = z.object({
   username: z.string().min(1, 'Username is required'),
-  domain:   z.string().min(1, 'Domain is required'),
+  domain: z.string().min(1, 'Domain is required'),
 });
 
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 export const resetPasswordSchema = z.object({
-  token:        z.string().min(1, 'Token is required'),
-  domain:       z.string().min(1, 'Domain is required'),
+  token: z.string().min(1, 'Token is required'),
+  domain: z.string().min(1, 'Domain is required'),
   new_password: passwordSchema,
 });
 
@@ -74,9 +74,33 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 // Common Query Validators
 // ============================================================
 
+/**
+ * Allowed columns for ORDER BY — prevents SQL injection via sortBy parameter.
+ * Add new sortable columns here as needed.
+ */
+const ALLOWED_SORT_COLUMNS = [
+  'created_at',
+  'updated_at',
+  'name',
+  'email',
+  'username',
+  'title',
+  'status',
+  'first_name',
+  'last_name',
+  'company_name',
+  'is_active',
+  'role',
+  'assigned_role',
+  'id',
+  'uuid',
+] as const;
+
+export const sortBySchema = z.enum(ALLOWED_SORT_COLUMNS).optional();
+
 export const searchQuerySchema = z.object({
-  search:    z.string().max(200).optional(),
-  sortBy:    z.string().max(50).optional(),
+  search: z.string().max(200).optional(),
+  sortBy: sortBySchema,
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
   ...paginationSchema.shape,
 });
@@ -97,7 +121,7 @@ export interface ApiResponse<T> {
 
 /** Pagination meta block — use `meta` key (not `pagination`) */
 export interface PaginationMeta {
-  page:  number;
+  page: number;
   limit: number;
   total: number;
   pages: number;
@@ -117,7 +141,7 @@ export const buildPaginatedResponse = <T>(
   data: T[],
   total: number,
   page: number,
-  limit: number
+  limit: number,
 ): PaginatedResponse<T> => ({
   success: true,
   data,

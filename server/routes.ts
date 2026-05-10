@@ -1,6 +1,6 @@
 /**
  * Master Route Registry — All module routes are mounted here
- * 
+ *
  * Rules:
  * - Every new module's routes.ts MUST be imported and mounted here
  * - Health check is always first (no auth)

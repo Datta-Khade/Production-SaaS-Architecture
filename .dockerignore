@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+client/dist/
+server/dist/
+
+# Environment files
+.env
+.env.development
+.env.staging
+.env.production
+.env.docker
+.env copy*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+logs/
+
+# Testing
+coverage/
+
+# Docker (nested)
+.docker/
+
+# Misc
+*.bak
+*.tmp
+*.md

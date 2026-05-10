@@ -8,7 +8,7 @@ export const useViewport = (): ViewportSize => {
   useEffect(() => {
     const updateViewport = () => {
       const width = window.innerWidth;
-      
+
       // Desktop: 1440px+ (Full HD and above)
       // Laptop: 1280px-1439px (Standard laptop screens)
       // Tablet: 768px-1279px (iPad landscape and similar, includes 1024px)
@@ -47,16 +47,16 @@ export const getViewportConfig = (viewport: ViewportSize) => ({
   minColumnWidth: viewport === 'tablet' || viewport === 'phone' ? 120 : 70,
   rowHeight: viewport === 'phone' ? 60 : 50,
   headerHeight: viewport === 'phone' ? 40 : 50,
-  alwaysShowHorizontalScroll: viewport === 'tablet' || viewport === 'phone'
+  alwaysShowHorizontalScroll: viewport === 'tablet' || viewport === 'phone',
 });
 
 export const getLayoutConfig = (viewport: ViewportSize) => {
   const isDesktopOrLaptop = viewport === 'desktop' || viewport === 'laptop';
   const isCompact = viewport === 'tablet' || viewport === 'phone';
-  
+
   return {
     showFixedSidebar: true,
-    sidebarMode: isDesktopOrLaptop ? 'full' : 'compact' as 'full' | 'compact',
+    sidebarMode: isDesktopOrLaptop ? 'full' : ('compact' as 'full' | 'compact'),
     sidebarWidth: isDesktopOrLaptop ? 67 : 56,
     mainMarginLeft: isDesktopOrLaptop ? 67 : 56,
     mainPadding: viewport === 'phone' ? 8 : viewport === 'tablet' ? 12 : 24,

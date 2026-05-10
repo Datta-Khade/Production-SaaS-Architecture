@@ -3,7 +3,7 @@
  */
 import { Router } from 'express';
 import { asyncHandler } from '../../middleware/asyncHandler.js';
-import { authenticate, requireRole } from '../../middleware/auth.js';
+import { authenticate } from '../../middleware/auth.js';
 import { requireTenant } from '../../middleware/tenant.js';
 import { usersController } from './controller.js';
 

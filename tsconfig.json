@@ -13,8 +13,8 @@
     "noEmit": true,
     "baseUrl": ".",
     "jsx": "react-jsx",
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "paths": {
       "@/*": ["./client/src/*"],
       "@shared/*": ["./shared/*"],

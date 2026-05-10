@@ -1,9 +1,9 @@
 /**
  * Database Access Layer — Tenant-scoped Drizzle instance
- * 
+ *
  * getDb() returns the tenant-scoped Drizzle instance from AsyncLocalStorage.
  * withTransaction() wraps multi-table writes in a database transaction.
- * 
+ *
  * Rules:
  * - Every repository MUST use getDb() — never import db/pool directly
  * - Multi-table writes MUST use withTransaction()
@@ -20,6 +20,8 @@ const dbStorage = new AsyncLocalStorage<{ db: NodePgDatabase; pool: pg.Pool }>()
 
 // Pool cache — one pool per unique connection string (max 5 connections each)
 const poolCache = new Map<string, pg.Pool>();
+const poolLastAccessed = new Map<string, number>(); // Track LRU for eviction
+const MAX_TENANT_POOLS = 50; // Global cap — prevents unbounded connection growth
 
 /**
  * Create or retrieve a connection pool for a given database URL.
@@ -27,11 +29,40 @@ const poolCache = new Map<string, pg.Pool>();
  */
 const getPool = (dbUrl: string): pg.Pool => {
   const existing = poolCache.get(dbUrl);
-  if (existing) return existing;
+  if (existing) {
+    poolLastAccessed.set(dbUrl, Date.now());
+    return existing;
+  }
+
+  // Evict least recently used pool if at capacity
+  if (poolCache.size >= MAX_TENANT_POOLS) {
+    let oldestUrl = '';
+    let oldestTime = Infinity;
+    for (const [url, time] of poolLastAccessed) {
+      if (time < oldestTime) {
+        oldestTime = time;
+        oldestUrl = url;
+      }
+    }
+    if (oldestUrl) {
+      const evicted = poolCache.get(oldestUrl);
+      if (evicted) {
+        evicted.end().catch((err) => {
+          logger.warn({ error: (err as Error).message }, 'Error closing evicted pool');
+        });
+      }
+      poolCache.delete(oldestUrl);
+      poolLastAccessed.delete(oldestUrl);
+      logger.warn(
+        { evictedUrl: oldestUrl.replace(/\/\/.*@/, '//<redacted>@'), poolCount: poolCache.size },
+        'Pool cache at capacity — evicted LRU pool',
+      );
+    }
+  }
 
   const pool = new Pool({
     connectionString: dbUrl,
-    max: 5,  // Max 5 connections per tenant — PgBouncer required at scale
+    max: 5, // Max 5 connections per tenant — PgBouncer required at scale
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
   });
@@ -41,9 +72,9 @@ const getPool = (dbUrl: string): pg.Pool => {
   });
 
   poolCache.set(dbUrl, pool);
+  poolLastAccessed.set(dbUrl, Date.now());
   return pool;
 };
-
 
 /**
  * Run a callback within a scoped DB context.
@@ -58,13 +89,15 @@ export const runWithDb = <T>(dbUrl: string, fn: () => T): T => {
 /**
  * Get the current request's tenant-scoped Drizzle instance.
  * EVERY repository must use this — never import db directly.
- * 
+ *
  * @throws Error if called outside a request context (no tenant resolved)
  */
 export const getDb = (): NodePgDatabase => {
   const store = dbStorage.getStore();
   if (!store?.db) {
-    throw new Error('Database not available — getDb() called outside request context. Ensure requireTenant middleware is applied.');
+    throw new Error(
+      'Database not available — getDb() called outside request context. Ensure requireTenant middleware is applied.',
+    );
   }
   return store.db;
 };
@@ -90,9 +123,7 @@ export const getRawPool = (): pg.Pool => {
  *     await repo2.createRelated(data, tx);
  *   });
  */
-export const withTransaction = async <T>(
-  fn: (tx: NodePgDatabase) => Promise<T>
-): Promise<T> => {
+export const withTransaction = async <T>(fn: (tx: NodePgDatabase) => Promise<T>): Promise<T> => {
   const db = getDb();
   return db.transaction(async (tx) => {
     return fn(tx as unknown as NodePgDatabase);
@@ -136,6 +167,7 @@ export const closeAllPools = async (): Promise<void> => {
   for (const [url, pool] of poolCache) {
     closePromises.push(pool.end());
     poolCache.delete(url);
+    poolLastAccessed.delete(url);
   }
   await Promise.all(closePromises);
   masterDb = null;

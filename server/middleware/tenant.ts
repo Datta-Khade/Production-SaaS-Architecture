@@ -1,6 +1,6 @@
 /**
  * Tenant Middleware — Resolve x-tenant-id header to a scoped DB connection
- * 
+ *
  * Flow:
  * 1. Extract x-tenant-id from header OR domain claim from JWT
  * 2. tenantConnectionManager looks up tuid → db_url (cached in Redis, TTL 5min)
@@ -13,12 +13,15 @@ import { getTenantConnection, getTenantByDomain } from '../modules/tenantConnect
 import { runWithDb } from '../modules/db.js';
 import { env } from '../env.js';
 
-
 /**
  * Resolve tenant from request headers or JWT domain claim.
  * In single-tenant mode (dev), uses DATABASE_URL directly.
  */
-export const requireTenant = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+export const requireTenant = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> => {
   // Single-tenant mode (Replit / local dev)
   if (!env.MULTI_TENANT) {
     req.tenantId = 'dev-tenant';

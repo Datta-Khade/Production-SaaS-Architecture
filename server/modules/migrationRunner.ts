@@ -1,6 +1,6 @@
 /**
  * Migration Runner — Auto-applies pending SQL migrations on startup
- * 
+ *
  * Rules:
  * - Every schema change = new .sql file in migrations/NNNN_description.sql
  * - NEVER modify an existing migration file after it has been applied
@@ -50,7 +50,8 @@ const getPendingMigrations = (migrationsDir: string, applied: Set<string>): stri
     return [];
   }
 
-  const allFiles = fs.readdirSync(migrationsDir)
+  const allFiles = fs
+    .readdirSync(migrationsDir)
     .filter((f) => f.endsWith('.sql'))
     .sort(); // Lexicographic sort — 0001, 0002, etc.
 
@@ -59,14 +60,11 @@ const getPendingMigrations = (migrationsDir: string, applied: Set<string>): stri
 
 /**
  * Run all pending migrations against a database.
- * 
+ *
  * @param dbUrl - PostgreSQL connection string
  * @param migrationsDir - Path to directory containing .sql files
  */
-export const runMigrations = async (
-  dbUrl: string,
-  migrationsDir: string
-): Promise<void> => {
+export const runMigrations = async (dbUrl: string, migrationsDir: string): Promise<void> => {
   const pool = new Pool({
     connectionString: dbUrl,
     max: 1, // Only 1 connection for migrations
@@ -97,7 +95,10 @@ export const runMigrations = async (
         logger.info({ migration: fileName }, '✅ Migration applied');
       } catch (err) {
         await client.query('ROLLBACK');
-        logger.error({ migration: fileName, error: (err as Error).message }, '❌ Migration failed — rolled back');
+        logger.error(
+          { migration: fileName, error: (err as Error).message },
+          '❌ Migration failed — rolled back',
+        );
         throw err; // Stop on first failure
       } finally {
         client.release();
@@ -116,7 +117,7 @@ export const runMigrations = async (
  */
 export const runTenantMigrations = async (
   tenantDbUrl: string,
-  migrationsDir?: string
+  migrationsDir?: string,
 ): Promise<void> => {
   const dir = migrationsDir || path.resolve(process.cwd(), 'migrations', 'tenant');
   await runMigrations(tenantDbUrl, dir);
@@ -134,28 +135,27 @@ if (isDirectRun) {
   const tenantDbUrl = process.env.DATABASE_URL;
 
   if (!masterDbUrl) {
-    console.error('❌ MASTER_DATABASE_URL not set in .env.development');
+    logger.error('MASTER_DATABASE_URL not set in .env.development');
     process.exit(1);
   }
 
   (async () => {
     try {
-      console.log('🗄️  Running migrations on master DB...');
+      logger.info('Running migrations on master DB...');
       const masterDir = path.resolve(process.cwd(), 'migrations', 'master');
       await runMigrations(masterDbUrl, masterDir);
 
       if (tenantDbUrl) {
-        console.log('🗄️  Running migrations on tenant dev DB...');
+        logger.info('Running migrations on tenant dev DB...');
         const tenantDir = path.resolve(process.cwd(), 'migrations', 'tenant');
         await runMigrations(tenantDbUrl, tenantDir);
       }
 
-      console.log('✅ All migrations complete!');
+      logger.info('All migrations complete!');
       process.exit(0);
     } catch (err) {
-      console.error('❌ Migration failed:', (err as Error).message);
+      logger.error({ error: (err as Error).message }, 'Migration failed');
       process.exit(1);
     }
   })();
 }
-

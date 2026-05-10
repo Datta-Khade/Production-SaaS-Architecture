@@ -1,6 +1,6 @@
 /**
  * Global Error Handler — Catches ALL thrown errors and formats consistent JSON responses
- * 
+ *
  * Rules:
  * - Custom error classes (AppError subclasses) map to their statusCode
  * - Unknown errors always return 500
@@ -15,13 +15,14 @@ interface ErrorResponse {
   success: false;
   code: string;
   message: string;
+  requestId?: string;
 }
 
 export const globalErrorHandler = (
   err: Error,
   req: Request,
   res: Response,
-  _next: NextFunction
+  _next: NextFunction,
 ): void => {
   // Determine if this is an operational (known) error
   const isOperational = err instanceof AppError && err.isOperational;
@@ -30,31 +31,38 @@ export const globalErrorHandler = (
 
   // Log the error
   if (statusCode >= 500) {
-    logger.error({
-      err,
-      method: req.method,
-      path: req.path,
-      statusCode,
-      tenantId: (req as any).tenantId,
-      userId: (req as any).user ? (req as any).user.sub : undefined,
-    }, `[${statusCode}] ${err.message}`);
+    logger.error(
+      {
+        err,
+        method: req.method,
+        path: req.path,
+        statusCode,
+        tenantId: (req as any).tenantId,
+        userId: (req as any).user ? (req as any).user.sub : undefined,
+      },
+      `[${statusCode}] ${err.message}`,
+    );
   } else {
-    logger.warn({
-      code,
-      message: err.message,
-      method: req.method,
-      path: req.path,
-      statusCode,
-    }, `[${statusCode}] ${err.message}`);
+    logger.warn(
+      {
+        code,
+        message: err.message,
+        method: req.method,
+        path: req.path,
+        statusCode,
+      },
+      `[${statusCode}] ${err.message}`,
+    );
   }
 
   // Build response — NEVER include stack traces
+  const requestId = req.headers['x-request-id'] as string | undefined;
   const response: ErrorResponse = {
     success: false,
     code,
     message: isOperational ? err.message : 'An unexpected error occurred',
+    ...(requestId && { requestId }),
   };
 
   res.status(statusCode).json(response);
 };
-

@@ -1,6 +1,6 @@
 /**
  * Users Service — Business logic for user management
- * 
+ *
  * Rules:
  * - Audit all changes
  * - Hash passwords before save
@@ -11,6 +11,36 @@ import { usersRepository } from './repository.js';
 import { auditLog } from '../lib/auditLog.js';
 import { NotFoundError, ValidationError } from '../../../shared/modules/errors/index.js';
 import { authService } from '../auth/service.js';
+import type { NewUser } from '../../../shared/modules/schema/users.js';
+
+/**
+ * Input type for creating a user.
+ * Omits system-managed fields — those are set by the service/repository layer.
+ */
+interface CreateUserInput {
+  email: string;
+  username?: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  role?: string;
+  assigned_role?: string;
+  is_active?: boolean;
+}
+
+/**
+ * Input type for updating a user.
+ * All fields optional — only provided fields are updated.
+ */
+interface UpdateUserInput {
+  email?: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  role?: string;
+  assigned_role?: string;
+  is_active?: boolean;
+}
 
 export const usersService = {
   /**
@@ -31,27 +61,33 @@ export const usersService = {
   },
 
   /**
-   * Create user with hashed password
+   * Create user with hashed password.
+   * Password is REQUIRED — no default password fallback.
    */
-  async createUser(data: any, actorUuid: string) {
-    const { id, uuid, created_at, updated_at, ...cleanData } = data;
-    
-    const passwordHash = await authService.hashPassword(cleanData.password || 'Welcome@123');
+  async createUser(data: CreateUserInput, actorUuid: string) {
+    if (!data.password) {
+      throw new ValidationError('Password is required when creating a user');
+    }
+
+    const passwordHash = await authService.hashPassword(data.password);
     const userUuid = uuidv4();
+
+    // Build the insert payload — omit non-schema fields like `password`
+    const { password: _password, ...cleanData } = data;
 
     const user = await usersRepository.create({
       ...cleanData,
       uuid: userUuid,
       password_hash: passwordHash,
       created_by_uuid: actorUuid,
-    });
+    } as NewUser);
 
     await auditLog.track({
       actor: { sub: actorUuid },
       action: 'create',
       entity: 'users_v2',
       entityUuid: user.uuid,
-      after: data,
+      after: data as unknown as Record<string, unknown>,
     });
 
     const { password_hash: _, ...userWithoutPassword } = user;
@@ -61,15 +97,12 @@ export const usersService = {
   /**
    * Update user details
    */
-  async updateUser(uuid: string, data: any, actorUuid: string) {
+  async updateUser(uuid: string, data: UpdateUserInput, actorUuid: string) {
     const existing = await usersRepository.findByUuid(uuid);
     if (!existing) throw new NotFoundError('User not found');
 
-    // Remove immutable and audit fields that might be strings
-    const { id, uuid: _uuid, created_at, updated_at, password_hash, ...cleanData } = data;
-
     const user = await usersRepository.update(uuid, {
-      ...cleanData,
+      ...data,
       updated_by_uuid: actorUuid,
     });
 

@@ -23,7 +23,7 @@ export const tasksService = {
 
   createTask: async (
     data: Omit<NewTask, 'uuid' | 'createdBy' | 'updatedBy'>,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<Task> => {
     const task = await tasksRepository.create({
       ...data,
@@ -46,7 +46,7 @@ export const tasksService = {
   updateTask: async (
     uuid: string,
     data: Partial<Omit<NewTask, 'uuid' | 'createdBy' | 'updatedBy'>>,
-    ctx: RequestContext
+    ctx: RequestContext,
   ): Promise<Task> => {
     const before = await tasksRepository.findById(uuid);
 
@@ -84,4 +84,3 @@ export const tasksService = {
     });
   },
 };
-

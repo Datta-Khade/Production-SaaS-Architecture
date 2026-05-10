@@ -22,8 +22,8 @@ import { getAccessToken, getTenantDomain, setAccessToken, logout } from './auth'
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime:            30_000,
-      retry:                1,
+      staleTime: 30_000,
+      retry: 1,
       refetchOnWindowFocus: false,
     },
     mutations: {
@@ -85,7 +85,7 @@ const silentRefresh = async (): Promise<string | null> => {
     if (domain) headers['X-Tenant-Domain'] = domain;
 
     const res = await fetch('/api/v2/auth/refresh', {
-      method:      'POST',
+      method: 'POST',
       headers,
       credentials: 'include', // Send httpOnly refresh cookie
     });
@@ -119,9 +119,9 @@ export const apiRequest = async <T>(
   method: string,
   endpoint: string,
   body?: unknown,
-  isRetry = false
+  isRetry = false,
 ): Promise<T> => {
-  const token  = getAccessToken();
+  const token = getAccessToken();
   const domain = getTenantDomain();
 
   const headers: Record<string, string> = {
@@ -139,7 +139,7 @@ export const apiRequest = async <T>(
   const res = await fetch(`/api/v2${endpoint}`, {
     method,
     headers,
-    body:        body ? JSON.stringify(body) : undefined,
+    body: body ? JSON.stringify(body) : undefined,
     credentials: 'include',
   });
 
@@ -161,7 +161,7 @@ export const apiRequest = async <T>(
   if (!res.ok) {
     let errorData: { message: string; code: string } = {
       message: 'An unexpected error occurred',
-      code:    'UNKNOWN',
+      code: 'UNKNOWN',
     };
     try {
       errorData = await res.json();
