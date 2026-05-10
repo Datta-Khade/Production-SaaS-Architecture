@@ -30,6 +30,7 @@ export async function setupVite(app: Application, server: Server) {
     customLogger: viteLogger,
     server: {
       middlewareMode: true,
+      allowedHosts: true,
       hmr: { server },
     },
     appType: 'custom',
