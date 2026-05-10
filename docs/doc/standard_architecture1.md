@@ -1,6 +1,9 @@
 # CLAUDE.md — Production Application Bootstrap Prompt
+
 # For: production.so | Fresh Project from Scratch
+
 # Designed by: Senior System Architect
+
 # Version: 1.0
 
 ---
@@ -18,6 +21,7 @@
 A **multi-tenant SaaS production application** built to serve 50+ enterprise clients.
 
 **Architecture Principles (non-negotiable):**
+
 - Clean Architecture with strict layer separation
 - Domain-Driven Design (DDD) with bounded contexts
 - 12-Factor App methodology
@@ -28,23 +32,23 @@ A **multi-tenant SaaS production application** built to serve 50+ enterprise cli
 
 ## 🧱 TECHNOLOGY STACK (LOCKED — DO NOT DEVIATE)
 
-| Layer | Technology | Rationale |
-|---|---|---|
-| Frontend | React 18 + TypeScript | Component-driven, type-safe UI |
-| Styling | Tailwind CSS + shadcn/ui | Utility-first, accessible components |
-| State/Data | TanStack Query v5 | Server state, caching, sync |
-| Forms | React Hook Form + Zod | Validated, type-safe forms |
-| Routing | React Router v6 | Client-side routing with lazy loading |
-| Backend | Node.js + Express + TypeScript | Async API server |
-| ORM | Drizzle ORM | Type-safe SQL, migration-first |
-| Database | PostgreSQL 15+ | Relational, multi-tenant isolation |
-| Caching | Redis 7+ | Session, cache, pub/sub |
-| Queue | BullMQ | Background jobs, retries, scheduling |
-| Auth | JWT + refresh tokens | Stateless, tenant-aware |
-| Logging | Pino | Structured JSON logs, tenant context |
-| Validation | Zod (shared schemas) | Single source of truth for types |
-| Testing | Vitest + Supertest | Unit + integration coverage |
-| Deployment | Docker + nginx | Container-first, LB-ready |
+| Layer      | Technology                     | Rationale                             |
+| ---------- | ------------------------------ | ------------------------------------- |
+| Frontend   | React 18 + TypeScript          | Component-driven, type-safe UI        |
+| Styling    | Tailwind CSS + shadcn/ui       | Utility-first, accessible components  |
+| State/Data | TanStack Query v5              | Server state, caching, sync           |
+| Forms      | React Hook Form + Zod          | Validated, type-safe forms            |
+| Routing    | React Router v6                | Client-side routing with lazy loading |
+| Backend    | Node.js + Express + TypeScript | Async API server                      |
+| ORM        | Drizzle ORM                    | Type-safe SQL, migration-first        |
+| Database   | PostgreSQL 15+                 | Relational, multi-tenant isolation    |
+| Caching    | Redis 7+                       | Session, cache, pub/sub               |
+| Queue      | BullMQ                         | Background jobs, retries, scheduling  |
+| Auth       | JWT + refresh tokens           | Stateless, tenant-aware               |
+| Logging    | Pino                           | Structured JSON logs, tenant context  |
+| Validation | Zod (shared schemas)           | Single source of truth for types      |
+| Testing    | Vitest + Supertest             | Unit + integration coverage           |
+| Deployment | Docker + nginx                 | Container-first, LB-ready             |
 
 ---
 
@@ -198,6 +202,7 @@ Every tenant has a fully isolated PostgreSQL database. This is the ONLY acceptab
 ```
 
 **Tenant Resolution Flow (per request):**
+
 1. Extract `x-tenant-id` header OR `domain` claim from JWT
 2. `tenantConnectionManager` looks up `tuid` → `db_url` from master DB (cached in Redis, TTL 5min)
 3. Returns a PgBouncer-backed Drizzle connection pool (max: 5 connections per tenant)
@@ -230,14 +235,14 @@ CREATE INDEX idx_tenants_active ON tenants(is_active) WHERE is_active = true;
 ```typescript
 // shared/modules/<module>/schema.ts
 import { pgTable, serial, text, boolean, timestamp } from 'drizzle-orm/pg-core';
-import { auditColumns } from '../schema/audit';  // ALWAYS spread these
+import { auditColumns } from '../schema/audit'; // ALWAYS spread these
 
 export const myEntityTable = pgTable('my_entity_v2', {
-  id:         serial('id').primaryKey(),
-  uuid:       text('uuid').notNull().unique(),    // Public-facing ID
-  name:       text('name').notNull(),
+  id: serial('id').primaryKey(),
+  uuid: text('uuid').notNull().unique(), // Public-facing ID
+  name: text('name').notNull(),
   is_deleted: boolean('is_deleted').default(false).notNull(),
-  ...auditColumns,                                // created_at, updated_at, created_by_uuid, etc.
+  ...auditColumns, // created_at, updated_at, created_by_uuid, etc.
 });
 ```
 
@@ -246,13 +251,13 @@ export const myEntityTable = pgTable('my_entity_v2', {
 ```typescript
 // shared/modules/schema/audit.ts
 export const auditColumns = {
-  created_at:       timestamp('created_at').defaultNow().notNull(),
-  updated_at:       timestamp('updated_at').defaultNow().notNull(),
-  created_by_uuid:  text('created_by_uuid'),   // Set by service, NOT from client
-  updated_by_uuid:  text('updated_by_uuid'),   // Set by service, NOT from client
-  is_deleted:       boolean('is_deleted').default(false).notNull(),
-  deleted_at:       timestamp('deleted_at'),
-  deleted_by_uuid:  text('deleted_by_uuid'),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull(),
+  created_by_uuid: text('created_by_uuid'), // Set by service, NOT from client
+  updated_by_uuid: text('updated_by_uuid'), // Set by service, NOT from client
+  is_deleted: boolean('is_deleted').default(false).notNull(),
+  deleted_at: timestamp('deleted_at'),
+  deleted_by_uuid: text('deleted_by_uuid'),
 };
 ```
 
@@ -304,12 +309,13 @@ Rules:
 
 ```typescript
 // server/modules/<module>/routes.ts
-router.get('/api/v2/items',
-  authenticate,                    // Verify JWT, attach req.user
-  requireTenant,                   // Resolve tenant DB connection
-  requireRole('user'),             // Minimum role check
-  rateLimiter,                     // Per-tenant rate limiting
-  asyncHandler(controller.getAll)  // Controller — never throws uncaught
+router.get(
+  '/api/v2/items',
+  authenticate, // Verify JWT, attach req.user
+  requireTenant, // Resolve tenant DB connection
+  requireRole('user'), // Minimum role check
+  rateLimiter, // Per-tenant rate limiting
+  asyncHandler(controller.getAll), // Controller — never throws uncaught
 );
 ```
 
@@ -319,11 +325,11 @@ router.get('/api/v2/items',
 
 ### Layer Responsibilities (STRICT — violations block PR merge)
 
-| Layer | Owns | NEVER Contains |
-|---|---|---|
-| Controller | HTTP in/out, call service, return response | Business logic, DB queries, req/res in service calls |
-| Service | Business rules, orchestration, audit logging | req/res objects, direct DB calls, HTTP status codes |
-| Repository | Drizzle queries ONLY | Business rules, HTTP context, raw SQL strings |
+| Layer      | Owns                                         | NEVER Contains                                       |
+| ---------- | -------------------------------------------- | ---------------------------------------------------- |
+| Controller | HTTP in/out, call service, return response   | Business logic, DB queries, req/res in service calls |
+| Service    | Business rules, orchestration, audit logging | req/res objects, direct DB calls, HTTP status codes  |
+| Repository | Drizzle queries ONLY                         | Business rules, HTTP context, raw SQL strings        |
 
 ### Controller Pattern
 
@@ -366,12 +372,13 @@ export const myService = {
 
 ```typescript
 // server/modules/<module>/repository.ts
-import { getDb } from '../../db';   // ALWAYS — never import db directly
+import { getDb } from '../../db'; // ALWAYS — never import db directly
 
 export const myRepository = {
   findAll: async ({ page, limit }: PaginationInput) => {
     const db = getDb();
-    return db.select()
+    return db
+      .select()
       .from(myEntityTable)
       .where(eq(myEntityTable.is_deleted, false))
       .limit(limit)
@@ -384,11 +391,11 @@ export const myRepository = {
 
 ```typescript
 // Throw these in services — NEVER raw Error objects
-throw new NotFoundError('Item not found');        // → 404
-throw new ValidationError('Email is required');   // → 400
-throw new ForbiddenError('Insufficient role');     // → 403
-throw new ConflictError('Email already exists');  // → 409
-throw new AppError('Something went wrong', 500);  // → 500
+throw new NotFoundError('Item not found'); // → 404
+throw new ValidationError('Email is required'); // → 400
+throw new ForbiddenError('Insufficient role'); // → 403
+throw new ConflictError('Email already exists'); // → 409
+throw new AppError('Something went wrong', 500); // → 500
 
 // globalErrorHandler maps these to consistent JSON:
 // { success: false, code: "NOT_FOUND", message: "Item not found" }
@@ -424,7 +431,7 @@ const MyModule = lazy(() => import('./modules/my-module'));
 export const apiRequest = async <T>(
   method: string,
   endpoint: string,
-  body?: unknown
+  body?: unknown,
 ): Promise<T> => {
   const token = getAccessToken();
   const tenantId = getTenantId();
@@ -433,8 +440,8 @@ export const apiRequest = async <T>(
     method,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      'x-tenant-id': tenantId,    // Auto-injected — never manual
+      Authorization: `Bearer ${token}`,
+      'x-tenant-id': tenantId, // Auto-injected — never manual
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -464,7 +471,7 @@ export const useCreateMyItem = () => {
   return useMutation({
     mutationFn: (data: CreateInput) => apiRequest('POST', '/my-items', data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['my-items'] }),
-    onError: (err) => toast.error(err.message),  // MANDATORY onError
+    onError: (err) => toast.error(err.message), // MANDATORY onError
   });
 };
 ```
@@ -479,7 +486,11 @@ const schema = z.object({
 });
 
 export const MyForm = () => {
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
     resolver: zodResolver(schema),
   });
   // ...
@@ -506,18 +517,26 @@ export const MyForm = () => {
 export const myQueue = new Queue('my-queue', { connection: redisConnection });
 
 // Enqueue (from service layer — return 202 Accepted immediately)
-await myQueue.add('job-name', { tenantId, payload }, {
-  attempts: 3,
-  backoff: { type: 'exponential', delay: 2000 },
-  removeOnComplete: 100,  // Keep last 100 completed
-  removeOnFail: 500,      // Keep last 500 failed for debugging
-});
+await myQueue.add(
+  'job-name',
+  { tenantId, payload },
+  {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 2000 },
+    removeOnComplete: 100, // Keep last 100 completed
+    removeOnFail: 500, // Keep last 500 failed for debugging
+  },
+);
 
 // workers/<queue-name>/processor.ts
-const worker = new Worker('my-queue', async (job) => {
-  const { tenantId, payload } = job.data;
-  // Process job — errors are auto-retried per config above
-}, { connection: redisConnection, concurrency: 5 });
+const worker = new Worker(
+  'my-queue',
+  async (job) => {
+    const { tenantId, payload } = job.data;
+    // Process job — errors are auto-retried per config above
+  },
+  { connection: redisConnection, concurrency: 5 },
+);
 ```
 
 ---
@@ -545,24 +564,24 @@ const key = tenantCacheKey(tenantId, 'resource', identifier);
 
 ### Coverage Requirements
 
-| Layer | Type | Minimum Coverage |
-|---|---|---|
-| Repository | Unit (mocked DB) | 80% |
-| Service | Unit (mocked repo) | 90% |
-| Controller | Integration (Supertest) | Cover: 200, 400, 401, 403, 404 |
-| Frontend hooks | Unit (React Testing Library) | 80% |
+| Layer          | Type                         | Minimum Coverage               |
+| -------------- | ---------------------------- | ------------------------------ |
+| Repository     | Unit (mocked DB)             | 80%                            |
+| Service        | Unit (mocked repo)           | 90%                            |
+| Controller     | Integration (Supertest)      | Cover: 200, 400, 401, 403, 404 |
+| Frontend hooks | Unit (React Testing Library) | 80%                            |
 
 ### Test Isolation Rule
 
 ```typescript
 // NEVER test against shared state — each test suite provisions its own tenant
 beforeAll(async () => {
-  testTenant = await createTestTenant();   // Isolated DB, unique tuid
+  testTenant = await createTestTenant(); // Isolated DB, unique tuid
   testToken = generateTestToken({ tenantId: testTenant.tuid, role: 'admin' });
 });
 
 afterAll(async () => {
-  await destroyTestTenant(testTenant.tuid);  // Clean up
+  await destroyTestTenant(testTenant.tuid); // Clean up
 });
 ```
 
@@ -608,18 +627,18 @@ req.log.error({ error: err.message, stack: err.stack }, 'Failed to process job')
 services:
   app:
     build: { context: ., dockerfile: infra/docker/Dockerfile.server }
-    ports: ["3000:3000"]
+    ports: ['3000:3000']
     depends_on: [postgres, redis]
     env_file: .env.development
 
   client:
     build: { context: ., dockerfile: infra/docker/Dockerfile.client }
-    ports: ["5173:5173"]
+    ports: ['5173:5173']
     depends_on: [app]
 
   postgres:
     image: postgres:15-alpine
-    volumes: ["pgdata:/var/lib/postgresql/data"]
+    volumes: ['pgdata:/var/lib/postgresql/data']
     environment:
       POSTGRES_DB: production_master
       POSTGRES_USER: dev
@@ -627,7 +646,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    volumes: ["redisdata:/data"]
+    volumes: ['redisdata:/data']
 
   pgbouncer:
     image: pgbouncer/pgbouncer:latest
@@ -640,19 +659,20 @@ volumes:
 
 ### Scaling Thresholds
 
-| Component | Phase 1 (< 10 tenants) | Phase 2 (10–50) | Phase 3 (50+) |
-|---|---|---|---|
-| DB Connections | Direct pool (max 5/tenant) | PgBouncer required | PgBouncer + read replicas |
-| Caching | Redis single instance | Redis Sentinel | Redis Cluster |
-| Background Jobs | BullMQ + 1 worker | BullMQ + 3 workers | Dedicated worker fleet |
-| App Servers | 1 instance | 2 (active-active) | Auto-scaling group |
-| Monitoring | Pino logs | Logs + Prometheus | Full APM (Datadog/Grafana) |
+| Component       | Phase 1 (< 10 tenants)     | Phase 2 (10–50)    | Phase 3 (50+)              |
+| --------------- | -------------------------- | ------------------ | -------------------------- |
+| DB Connections  | Direct pool (max 5/tenant) | PgBouncer required | PgBouncer + read replicas  |
+| Caching         | Redis single instance      | Redis Sentinel     | Redis Cluster              |
+| Background Jobs | BullMQ + 1 worker          | BullMQ + 3 workers | Dedicated worker fleet     |
+| App Servers     | 1 instance                 | 2 (active-active)  | Auto-scaling group         |
+| Monitoring      | Pino logs                  | Logs + Prometheus  | Full APM (Datadog/Grafana) |
 
 ---
 
 ## 📋 PRE-FLIGHT CHECKLIST (Run before every PR merge)
 
 ### Database
+
 - [ ] Every table has `id` (serial PK) + `uuid` (text, unique)
 - [ ] Every table spreads `...auditColumns`
 - [ ] `created_by_uuid` / `updated_by_uuid` set in service — NOT from client input
@@ -668,6 +688,7 @@ volumes:
 - [ ] No N+1 queries — use `inArray()` batch or JOINs
 
 ### Backend
+
 - [ ] All new code under `server/modules/<module>/`
 - [ ] Every repository uses `getDb()` — never direct `db` or `pool` import
 - [ ] Controllers have ZERO business logic
@@ -681,6 +702,7 @@ volumes:
 - [ ] Routes mounted in `server/routes.ts`
 
 ### Security
+
 - [ ] Every route has `requireRole()` middleware
 - [ ] Rate limiting applied to all public endpoints
 - [ ] No DB errors or stack traces in API responses
@@ -688,6 +710,7 @@ volumes:
 - [ ] Input sanitized and validated before DB insert
 
 ### Frontend
+
 - [ ] Module lives in `client/src/modules/<module>/`
 - [ ] API calls use `apiRequest()` — never raw fetch with manual headers
 - [ ] Data fetching uses TanStack Query (never useState + useEffect)
@@ -698,6 +721,7 @@ volumes:
 - [ ] Every `useMutation` has an `onError` handler with user feedback
 
 ### Multi-Tenancy
+
 - [ ] Repository uses `getDb()` — not direct pool
 - [ ] Cache keys use `tenantCacheKey()` prefix
 - [ ] No `tenant_id` column in tables (isolation is DB-level)
@@ -705,6 +729,7 @@ volumes:
 - [ ] Audit logs include `tenantId` context
 
 ### Tests
+
 - [ ] Integration tests cover: 200, 201, 400, 401, 403, 404 status codes
 - [ ] Service unit tests cover happy path + all error branches
 - [ ] Tests use isolated tenant (`createTestTenant()`)
@@ -714,38 +739,38 @@ volumes:
 
 ## ❌ DON'T LIST (Hard Stops — These Block Merge)
 
-| # | ❌ Never Do | ✅ Do Instead |
-|---|---|---|
-| 1 | Add routes without `requireRole()` | Every route declares minimum role |
-| 2 | Return unbounded lists | Always use `normalizePagination()` |
-| 3 | Use `console.log` in server code | Use `req.log.info/error()` from Pino |
-| 4 | Write audit logic in controllers | Call `auditService.log()` from service |
-| 5 | Create cache keys without tenant scope | Always prefix with `tenantCacheKey()` |
-| 6 | Open unlimited DB connections per tenant | `max: 5` per pool + PgBouncer |
-| 7 | Call slow APIs inline in request cycle | Queue via BullMQ, return 202 |
-| 8 | Skip error boundaries on lazy routes | Every lazy route = `<ModuleErrorBoundary>` |
-| 9 | Test against shared tenant | `createTestTenant()` per test suite |
-| 10 | Deploy without `/api/health` check | Health check verifies DB + Redis |
-| 11 | Add business logic to controllers | Move to service layer |
-| 12 | Reference `req`/`res` in services | Services are pure — no HTTP context |
-| 13 | Use `any` types in TypeScript | Use proper types or `unknown` + type guard |
-| 14 | Modify existing migration files | Always create new migration file |
-| 15 | Hard DELETE in production | `is_deleted = true` soft delete only |
-| 16 | Throw raw `new Error()` in services | Use `NotFoundError`, `ValidationError`, etc. |
-| 17 | Catch errors in controllers | Let `globalErrorHandler` handle all errors |
-| 18 | Expose stack traces in API responses | Sanitize in `globalErrorHandler` |
-| 19 | Write to multiple tables without transaction | Use `withTransaction()` |
-| 20 | Boot without env var validation | Validate all env vars in `env.ts` at startup |
-| 21 | Use `// @ts-ignore` or `as any` | Fix the type or use `unknown` + type guard |
-| 22 | Define BullMQ jobs without retry config | Set `attempts`, `backoff`, `removeOnFail` |
-| 23 | `useMutation` without `onError` | Every mutation has `onError` with toast |
-| 24 | Return `null` for expected records | Throw `NotFoundError` — never return null |
-| 25 | Use `jsonb` for structured data | Normalize into relational tables |
-| 26 | FK columns without `.references()` | Every FK uses `.references()` + `onDelete` |
-| 27 | Tables without indexes on filter columns | Index every FK + WHERE column |
-| 28 | Include `file_data` in list queries | Fetch `file_data` only on single-record GET |
-| 29 | Query in loops (N+1) | Use `inArray()` batch or JOINs |
-| 30 | Redefine audit columns per table | Always spread `...auditColumns` |
+| #   | ❌ Never Do                                  | ✅ Do Instead                                |
+| --- | -------------------------------------------- | -------------------------------------------- |
+| 1   | Add routes without `requireRole()`           | Every route declares minimum role            |
+| 2   | Return unbounded lists                       | Always use `normalizePagination()`           |
+| 3   | Use `console.log` in server code             | Use `req.log.info/error()` from Pino         |
+| 4   | Write audit logic in controllers             | Call `auditService.log()` from service       |
+| 5   | Create cache keys without tenant scope       | Always prefix with `tenantCacheKey()`        |
+| 6   | Open unlimited DB connections per tenant     | `max: 5` per pool + PgBouncer                |
+| 7   | Call slow APIs inline in request cycle       | Queue via BullMQ, return 202                 |
+| 8   | Skip error boundaries on lazy routes         | Every lazy route = `<ModuleErrorBoundary>`   |
+| 9   | Test against shared tenant                   | `createTestTenant()` per test suite          |
+| 10  | Deploy without `/api/health` check           | Health check verifies DB + Redis             |
+| 11  | Add business logic to controllers            | Move to service layer                        |
+| 12  | Reference `req`/`res` in services            | Services are pure — no HTTP context          |
+| 13  | Use `any` types in TypeScript                | Use proper types or `unknown` + type guard   |
+| 14  | Modify existing migration files              | Always create new migration file             |
+| 15  | Hard DELETE in production                    | `is_deleted = true` soft delete only         |
+| 16  | Throw raw `new Error()` in services          | Use `NotFoundError`, `ValidationError`, etc. |
+| 17  | Catch errors in controllers                  | Let `globalErrorHandler` handle all errors   |
+| 18  | Expose stack traces in API responses         | Sanitize in `globalErrorHandler`             |
+| 19  | Write to multiple tables without transaction | Use `withTransaction()`                      |
+| 20  | Boot without env var validation              | Validate all env vars in `env.ts` at startup |
+| 21  | Use `// @ts-ignore` or `as any`              | Fix the type or use `unknown` + type guard   |
+| 22  | Define BullMQ jobs without retry config      | Set `attempts`, `backoff`, `removeOnFail`    |
+| 23  | `useMutation` without `onError`              | Every mutation has `onError` with toast      |
+| 24  | Return `null` for expected records           | Throw `NotFoundError` — never return null    |
+| 25  | Use `jsonb` for structured data              | Normalize into relational tables             |
+| 26  | FK columns without `.references()`           | Every FK uses `.references()` + `onDelete`   |
+| 27  | Tables without indexes on filter columns     | Index every FK + WHERE column                |
+| 28  | Include `file_data` in list queries          | Fetch `file_data` only on single-record GET  |
+| 29  | Query in loops (N+1)                         | Use `inArray()` batch or JOINs               |
+| 30  | Redefine audit columns per table             | Always spread `...auditColumns`              |
 
 ---
 
@@ -847,6 +872,6 @@ The following are deliberate improvements over the base architecture reference:
 
 ---
 
-*Document Version: 1.0 — production.so Fresh Start*
-*Architecture Owner: Senior System Architect*
-*Next Review: After Phase 1 completion*
+_Document Version: 1.0 — production.so Fresh Start_
+_Architecture Owner: Senior System Architect_
+_Next Review: After Phase 1 completion_

@@ -2,14 +2,15 @@
 
 > **For AI Agents & Developers**: Follow this file **exactly** when building any new module.
 > Every rule below prevents a real, production-witnessed failure.
-security file scanning
----
+
+## security file scanning
 
 ## Project Technologies
 
 This project is a **multi-tenant SaaS** application built to support 50+ clients. The architecture follows **Clean Architecture**, **Domain-Driven Design (DDD)**, **12-Factor App**, **OWASP Top 10**, and **AWS Well-Architected Framework** principles.
 
 The core technology stack powering the platform consists of:
+
 - **Frontend**: Built with **React.js** to deliver a robust, responsive, and component-driven user interface.
 - **Backend**: Powered by **Node.js**, providing a highly scalable and efficient asynchronous API ecosystem.
 - **Database**: **PostgreSQL** serves as the primary relational data store, ensuring transactional integrity and secure multi-tenant isolation.
@@ -22,6 +23,7 @@ The core technology stack powering the platform consists of:
 ### How Multi-Tenancy Works in This Project
 
 The system uses a **database-per-tenant** architecture. Every tenant has their **own isolated PostgreSQL database**. Tenant resolution happens via:
+
 1. The `x-tenant-id` header sent by the frontend.
 2. The `domain` claim inside the JWT (fallback).
 3. `tenantConnectionManager` resolves the `tuid` → creates a dedicated connection pool → all queries run against that tenant's DB.
@@ -55,18 +57,18 @@ The system uses a **database-per-tenant** architecture. Every tenant has their *
 
 ```typescript
 // ✅ CORRECT — in any repository file:
-import { getDb } from "../../db";    // tenant-aware Drizzle instance
+import { getDb } from '../../db'; // tenant-aware Drizzle instance
 
 export const myRepository = {
   async getAll() {
-    const db = getDb();              // ← resolves correct tenant DB automatically
+    const db = getDb(); // ← resolves correct tenant DB automatically
     return db.select().from(myTable);
   },
 };
 
 // ❌ WRONG — never do this:
-import { db } from "../../../server/db";  // bypasses tenant context
-import { pool } from "../../../server/db"; // bypasses tenant context
+import { db } from '../../../server/db'; // bypasses tenant context
+import { pool } from '../../../server/db'; // bypasses tenant context
 ```
 
 ---
@@ -77,12 +79,14 @@ import { pool } from "../../../server/db"; // bypasses tenant context
 > **Replit is ALWAYS single-tenant.** Do NOT attempt to write multi-tenant logic for the Replit development environment. It connects to one fixed PostgreSQL database.
 
 When running on **Replit**:
+
 - The app connects to a single PostgreSQL database via the `DATABASE_URL` environment variable.
 - There is **no `x-tenant-id` resolution** — the environment acts as if there is only one tenant.
 - The `tenantMiddleware` resolves to the single configured database connection.
 - `AUTH_BYPASS=true` is typically set to skip JWT verification in dev/Replit.
 
 **Environment variables on Replit:**
+
 ```env
 DATABASE_URL=postgresql://user:password@host:5432/dbname   # Single tenant DB
 AUTH_BYPASS=true                                            # Skip JWT in dev
@@ -177,21 +181,21 @@ The runner auto-detects which mode it is in:
 if (!process.env.DATABASE_URL) {
   if (process.env.MASTER_DATABASE_URL) {
     // Multi-tenant production: migrations run per-tenant on first connection
-    console.log("⏭️  Skipping startup migrations — runs per tenant on first connection");
+    console.log('⏭️  Skipping startup migrations — runs per tenant on first connection');
   } else {
     // No DB at all (standalone dev)
-    console.log("⏭️  Skipping migrations: no database configured");
+    console.log('⏭️  Skipping migrations: no database configured');
   }
   return;
 }
 // Single-tenant (Replit / dev): run all migrations against DATABASE_URL
 ```
 
-| Mode | `DATABASE_URL` | `MASTER_DATABASE_URL` | Behavior |
-|---|---|---|---|
-| **Replit / single-tenant dev** | ✅ Set | ❌ Not set | Runs all migrations against `DATABASE_URL` on startup |
-| **Multi-tenant production** | ❌ Not set | ✅ Set | Skips startup; migrations run per-tenant via `runMigrationsForTenant()` on first connection |
-| **No DB (offline dev)** | ❌ Not set | ❌ Not set | Skips everything silently |
+| Mode                           | `DATABASE_URL` | `MASTER_DATABASE_URL` | Behavior                                                                                    |
+| ------------------------------ | -------------- | --------------------- | ------------------------------------------------------------------------------------------- |
+| **Replit / single-tenant dev** | ✅ Set         | ❌ Not set            | Runs all migrations against `DATABASE_URL` on startup                                       |
+| **Multi-tenant production**    | ❌ Not set     | ✅ Set                | Skips startup; migrations run per-tenant via `runMigrationsForTenant()` on first connection |
+| **No DB (offline dev)**        | ❌ Not set     | ❌ Not set            | Skips everything silently                                                                   |
 
 #### Per-Tenant Migration (Production)
 
@@ -215,6 +219,7 @@ migrations/
 ```
 
 **File naming rules:**
+
 - Format: `NNNN_short_description.sql` (4-digit zero-padded number)
 - Use `snake_case` for the description
 - Be specific: `add_is_deleted_to_crew_pool` not just `update_crew_pool`
@@ -267,16 +272,16 @@ npm run dev
 
 #### Migration Rules — MUST Follow
 
-| # | Rule |
-|---|---|
-| 1 | **Never modify an applied migration** — it's already recorded in `schema_migrations`. Create a new file instead |
-| 2 | **Never delete migration files** — keep them for version history and new tenant provisioning |
-| 3 | **Never run migrations manually** with `psql` — the tracker won't know, causing `schema_migrations` desync |
-| 4 | **Always use `IF NOT EXISTS`** for `CREATE TABLE`, `CREATE INDEX` to make migrations safe to re-run |
-| 5 | **Always include a rollback comment** at the top of the file for emergencies |
-| 6 | **One migration per logical change** — don't bundle unrelated table changes |
-| 7 | **Only `.sql` files** in `migrations/` are picked up — no `.ts`, no subdirectories |
-| 8 | If a migration fails, **look at the error log** — the server will refuse to start until it's fixed |
+| #   | Rule                                                                                                            |
+| --- | --------------------------------------------------------------------------------------------------------------- |
+| 1   | **Never modify an applied migration** — it's already recorded in `schema_migrations`. Create a new file instead |
+| 2   | **Never delete migration files** — keep them for version history and new tenant provisioning                    |
+| 3   | **Never run migrations manually** with `psql` — the tracker won't know, causing `schema_migrations` desync      |
+| 4   | **Always use `IF NOT EXISTS`** for `CREATE TABLE`, `CREATE INDEX` to make migrations safe to re-run             |
+| 5   | **Always include a rollback comment** at the top of the file for emergencies                                    |
+| 6   | **One migration per logical change** — don't bundle unrelated table changes                                     |
+| 7   | **Only `.sql` files** in `migrations/` are picked up — no `.ts`, no subdirectories                              |
+| 8   | If a migration fails, **look at the error log** — the server will refuse to start until it's fixed              |
 
 #### Verifying Migration Status
 
@@ -301,20 +306,20 @@ Every endpoint MUST declare the minimum `userType` required. Do NOT rely only on
 ```typescript
 // shared/modules/auth/permissions.ts
 export const UserType = {
-  ADMIN:   "admin",
-  MANAGER: "manager",
-  USER:    "user",
-  VIEWER:  "viewer",
+  ADMIN: 'admin',
+  MANAGER: 'manager',
+  USER: 'user',
+  VIEWER: 'viewer',
 } as const;
 
-export type UserType = typeof UserType[keyof typeof UserType];
+export type UserType = (typeof UserType)[keyof typeof UserType];
 
 // Permission hierarchy: admin > manager > user > viewer
 export const ROLE_HIERARCHY: Record<UserType, number> = {
-  admin:   4,
+  admin: 4,
   manager: 3,
-  user:    2,
-  viewer:  1,
+  user: 2,
+  viewer: 1,
 };
 
 export function hasPermission(userType: UserType, required: UserType): boolean {
@@ -324,14 +329,14 @@ export function hasPermission(userType: UserType, required: UserType): boolean {
 
 ```typescript
 // server/modules/middleware/requireRole.ts
-import { Request, Response, NextFunction } from "express";
-import { hasPermission, UserType } from "@shared/modules/auth/permissions";
+import { Request, Response, NextFunction } from 'express';
+import { hasPermission, UserType } from '@shared/modules/auth/permissions';
 
 export function requireRole(minRole: UserType) {
   return (req: Request, res: Response, next: NextFunction) => {
     const userType = req.user?.userType as UserType;
     if (!userType || !hasPermission(userType, minRole)) {
-      return res.status(403).json({ error: "Insufficient permissions" });
+      return res.status(403).json({ error: 'Insufficient permissions' });
     }
     next();
   };
@@ -340,12 +345,13 @@ export function requireRole(minRole: UserType) {
 
 ```typescript
 // In routes.ts — apply per route:
-router.post("/entities", requireRole("manager"), myEntityController.create);
-router.delete("/entities/:uuid", requireRole("admin"), myEntityController.delete);
-router.get("/entities", requireRole("viewer"), myEntityController.getAll);
+router.post('/entities', requireRole('manager'), myEntityController.create);
+router.delete('/entities/:uuid', requireRole('admin'), myEntityController.delete);
+router.get('/entities', requireRole('viewer'), myEntityController.getAll);
 ```
 
 **RBAC Rules:**
+
 - Every route in `routes.ts` MUST have an explicit `requireRole()` middleware
 - GET endpoints minimum: `viewer`. POST/PATCH minimum: `user`. DELETE minimum: `admin`
 - NEVER check roles inside controllers or services — that is the middleware's job
@@ -359,16 +365,16 @@ Install `express-rate-limit` and apply at multiple levels:
 
 ```typescript
 // server/middleware/rateLimiter.ts
-import rateLimit from "express-rate-limit";
-import RedisStore from "rate-limit-redis";
-import { redisClient } from "../utils/redis";
+import rateLimit from 'express-rate-limit';
+import RedisStore from 'rate-limit-redis';
+import { redisClient } from '../utils/redis';
 
 export const globalRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 300,
   keyGenerator: (req) => `${req.tenantId}:${req.ip}`,
   store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) }),
-  message: { error: "Too many requests, please slow down." },
+  message: { error: 'Too many requests, please slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -378,7 +384,7 @@ export const authRateLimiter = rateLimit({
   max: 10,
   keyGenerator: (req) => `auth:${req.body?.domain}:${req.ip}`,
   store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) }),
-  message: { error: "Too many login attempts. Please try again in 1 minute." },
+  message: { error: 'Too many login attempts. Please try again in 1 minute.' },
 });
 
 export const heavyRateLimiter = rateLimit({
@@ -386,15 +392,15 @@ export const heavyRateLimiter = rateLimit({
   max: 10,
   keyGenerator: (req) => `heavy:${req.tenantId}:${req.user?.id}`,
   store: new RedisStore({ sendCommand: (...args) => redisClient.sendCommand(args) }),
-  message: { error: "Rate limit exceeded for bulk operations." },
+  message: { error: 'Rate limit exceeded for bulk operations.' },
 });
 ```
 
 ```typescript
 // server/index.ts
-app.use("/api/v2/", globalRateLimiter);
-app.use("/api/v2/auth/login", authRateLimiter);
-app.use("/api/v2/auth/refresh", authRateLimiter);
+app.use('/api/v2/', globalRateLimiter);
+app.use('/api/v2/auth/login', authRateLimiter);
+app.use('/api/v2/auth/refresh', authRateLimiter);
 ```
 
 ---
@@ -403,7 +409,7 @@ app.use("/api/v2/auth/refresh", authRateLimiter);
 
 ```typescript
 // server/modules/utils/sanitize.ts
-import DOMPurify from "isomorphic-dompurify";
+import DOMPurify from 'isomorphic-dompurify';
 
 export function sanitizeString(value: string): string {
   return DOMPurify.sanitize(value, { ALLOWED_TAGS: [] }).trim();
@@ -413,8 +419,8 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
   return Object.fromEntries(
     Object.entries(obj).map(([key, value]) => [
       key,
-      typeof value === "string" ? sanitizeString(value) : value,
-    ])
+      typeof value === 'string' ? sanitizeString(value) : value,
+    ]),
   ) as T;
 }
 ```
@@ -471,14 +477,14 @@ Future modules MUST support standalone user authentication — users log in with
 // Generated on login — expires quickly
 const accessToken = jwt.sign(
   {
-    id: user.id,               // Internal user ID
-    uuid: user.uuid,           // Public user UUID
-    username: user.username,   // Username / crew ID
-    domain: user.domain,       // Tenant domain
-    userType: user.userType,   // "admin" | "user" | "crew" | "viewer"
+    id: user.id, // Internal user ID
+    uuid: user.uuid, // Public user UUID
+    username: user.username, // Username / crew ID
+    domain: user.domain, // Tenant domain
+    userType: user.userType, // "admin" | "user" | "crew" | "viewer"
   },
   process.env.JWT_SECRET,
-  { expiresIn: "15m" }        // 15 minutes — NEVER longer than 1 hour
+  { expiresIn: '15m' }, // 15 minutes — NEVER longer than 1 hour
 );
 ```
 
@@ -491,10 +497,10 @@ const refreshToken = jwt.sign(
     id: user.id,
     uuid: user.uuid,
     domain: user.domain,
-    type: "refresh",           // Distinguishes from access token
+    type: 'refresh', // Distinguishes from access token
   },
-  process.env.JWT_REFRESH_SECRET,  // DIFFERENT secret from access token
-  { expiresIn: "7d" }             // 7 days
+  process.env.JWT_REFRESH_SECRET, // DIFFERENT secret from access token
+  { expiresIn: '7d' }, // 7 days
 );
 ```
 
@@ -553,8 +559,8 @@ Every /api/v2/* request (except exempt paths):
 ```typescript
 // tenantFetch.ts patches window.fetch() globally:
 // Every fetch to /api/* automatically gets:
-headers.set("Authorization", `Bearer ${accessToken}`);
-headers.set("x-tenant-id", tenantId);
+headers.set('Authorization', `Bearer ${accessToken}`);
+headers.set('x-tenant-id', tenantId);
 
 // YOU NEVER DO THIS MANUALLY. It's automatic.
 ```
@@ -625,11 +631,11 @@ export class AppError extends Error {
   constructor(
     public readonly message: string,
     public readonly statusCode: number,
-    public readonly code: string,           // machine-readable, e.g. "INVOICE_NOT_FOUND"
-    public readonly details?: unknown       // optional field-level detail
+    public readonly code: string, // machine-readable, e.g. "INVOICE_NOT_FOUND"
+    public readonly details?: unknown, // optional field-level detail
   ) {
     super(message);
-    this.name = "AppError";
+    this.name = 'AppError';
     Error.captureStackTrace(this, this.constructor);
   }
 }
@@ -643,19 +649,19 @@ export class NotFoundError extends AppError {
 
 export class ValidationError extends AppError {
   constructor(details: unknown) {
-    super("Validation failed", 400, "VALIDATION_ERROR", details);
+    super('Validation failed', 400, 'VALIDATION_ERROR', details);
   }
 }
 
 export class ForbiddenError extends AppError {
-  constructor(message = "Insufficient permissions") {
-    super(message, 403, "FORBIDDEN");
+  constructor(message = 'Insufficient permissions') {
+    super(message, 403, 'FORBIDDEN');
   }
 }
 
 export class ConflictError extends AppError {
   constructor(message: string) {
-    super(message, 409, "CONFLICT");
+    super(message, 409, 'CONFLICT');
   }
 }
 ```
@@ -666,22 +672,17 @@ Register this as the **last** middleware in `server/index.ts`. It catches every 
 
 ```typescript
 // server/modules/middleware/errorHandler.ts
-import { Request, Response, NextFunction } from "express";
-import { ZodError } from "zod";
-import { AppError } from "../utils/AppError";
+import { Request, Response, NextFunction } from 'express';
+import { ZodError } from 'zod';
+import { AppError } from '../utils/AppError';
 
-export function globalErrorHandler(
-  err: unknown,
-  req: Request,
-  res: Response,
-  _next: NextFunction
-) {
+export function globalErrorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   // Zod validation errors → 400 with field details
   if (err instanceof ZodError) {
     return res.status(400).json({
       success: false,
-      code: "VALIDATION_ERROR",
-      message: "Validation failed",
+      code: 'VALIDATION_ERROR',
+      message: 'Validation failed',
       details: err.flatten().fieldErrors,
     });
   }
@@ -698,11 +699,11 @@ export function globalErrorHandler(
   }
 
   // Unknown errors → always 500, never leak internals
-  req.log?.error({ err }, "Unhandled error");
+  req.log?.error({ err }, 'Unhandled error');
   return res.status(500).json({
     success: false,
-    code: "INTERNAL_ERROR",
-    message: "An unexpected error occurred.",
+    code: 'INTERNAL_ERROR',
+    message: 'An unexpected error occurred.',
   });
 }
 ```
@@ -730,6 +731,7 @@ async create(tenantId: string, dto: unknown) {
 ```
 
 **Rules:**
+
 - NEVER return `null` from a service when a record is expected — throw `NotFoundError`
 - NEVER catch errors in controllers just to re-throw — let `globalErrorHandler` handle them
 - NEVER expose stack traces, DB errors, or internal messages to API responses
@@ -747,12 +749,7 @@ export function successResponse<T>(data: T, meta?: Record<string, unknown>) {
   return { success: true, data, ...(meta ? { meta } : {}) };
 }
 
-export function paginatedResponse<T>(
-  data: T[],
-  total: number,
-  page: number,
-  limit: number
-) {
+export function paginatedResponse<T>(data: T[], total: number, page: number, limit: number) {
   return {
     success: true,
     data,
@@ -770,17 +767,17 @@ return res.status(200).json(paginatedResponse(rows, total, page, limit));
 
 **Standard HTTP Status Codes:**
 
-| Scenario | Status |
-|---|---|
-| Successful GET / PATCH | 200 |
-| Resource created | 201 |
-| Async job accepted | 202 |
-| Validation error | 400 |
-| Not authenticated | 401 |
-| Insufficient permission | 403 |
-| Resource not found | 404 |
-| Duplicate / conflict | 409 |
-| Server error | 500 |
+| Scenario                | Status |
+| ----------------------- | ------ |
+| Successful GET / PATCH  | 200    |
+| Resource created        | 201    |
+| Async job accepted      | 202    |
+| Validation error        | 400    |
+| Not authenticated       | 401    |
+| Insufficient permission | 403    |
+| Resource not found      | 404    |
+| Duplicate / conflict    | 409    |
+| Server error            | 500    |
 
 ---
 
@@ -790,10 +787,10 @@ Any operation that writes to **more than one table** MUST be wrapped in a databa
 
 ```typescript
 // server/modules/utils/transaction.ts
-import { getDb } from "../db";
+import { getDb } from '../db';
 
 export async function withTransaction<T>(
-  fn: (tx: ReturnType<typeof getDb>) => Promise<T>
+  fn: (tx: ReturnType<typeof getDb>) => Promise<T>,
 ): Promise<T> {
   const db = getDb();
   return db.transaction(fn);
@@ -813,6 +810,7 @@ async createInvoiceWithItems(tenantId: string, dto: CreateInvoiceDto) {
 ```
 
 **Rules:**
+
 - Any service method touching 2+ tables MUST use `withTransaction()`
 - Pass the `tx` object into repositories — never call `getDb()` inside a transaction callback
 - Transactions auto-rollback on any thrown error — do not manually catch inside `withTransaction`
@@ -825,22 +823,22 @@ The app MUST validate all required environment variables at startup. A missing v
 
 ```typescript
 // server/modules/config/env.ts
-import { z } from "zod";
+import { z } from 'zod';
 
 const envSchema = z.object({
-  NODE_ENV:         z.enum(["development", "test", "production"]),
-  DATABASE_URL:     z.string().url(),
-  REDIS_URL:        z.string().url(),
-  JWT_SECRET:       z.string().min(32),
+  NODE_ENV: z.enum(['development', 'test', 'production']),
+  DATABASE_URL: z.string().url(),
+  REDIS_URL: z.string().url(),
+  JWT_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
-  PORT:             z.coerce.number().default(3000),
-  LOG_LEVEL:        z.enum(["trace", "debug", "info", "warn", "error"]).default("info"),
+  PORT: z.coerce.number().default(3000),
+  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error']).default('info'),
 });
 
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error("❌ Invalid environment variables:");
+  console.error('❌ Invalid environment variables:');
   console.error(parsed.error.flatten().fieldErrors);
   process.exit(1);
 }
@@ -850,7 +848,7 @@ export const env = parsed.data;
 
 ```typescript
 // server/index.ts — import env FIRST before anything else
-import "./v2/config/env";   // crashes here if env is invalid
+import './v2/config/env'; // crashes here if env is invalid
 ```
 
 ---
@@ -861,11 +859,11 @@ During deploys, the process receives SIGTERM. Without a handler, in-flight DB qu
 
 ```typescript
 // server/modules/shutdown.ts
-import { db } from "./db";
-import { redisClient } from "./utils/redis";
-import { emailWorker } from "./queues/emailQueue";
+import { db } from './db';
+import { redisClient } from './utils/redis';
+import { emailWorker } from './queues/emailQueue';
 
-export function registerGracefulShutdown(server: import("http").Server) {
+export function registerGracefulShutdown(server: import('http').Server) {
   const shutdown = async (signal: string) => {
     console.log(`Received ${signal}. Starting graceful shutdown...`);
 
@@ -877,23 +875,23 @@ export function registerGracefulShutdown(server: import("http").Server) {
 
         // Close DB and Redis connections
         await redisClient.quit();
-        console.log("Graceful shutdown complete.");
+        console.log('Graceful shutdown complete.');
         process.exit(0);
       } catch (err) {
-        console.error("Error during shutdown:", err);
+        console.error('Error during shutdown:', err);
         process.exit(1);
       }
     });
 
     // Force kill if shutdown takes too long
     setTimeout(() => {
-      console.error("Shutdown timeout — forcing exit.");
+      console.error('Shutdown timeout — forcing exit.');
       process.exit(1);
     }, 15_000);
   };
 
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT",  () => shutdown("SIGINT"));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 ```
 
@@ -911,32 +909,36 @@ BullMQ jobs MUST define retry behavior and a failure handler. Silent job failure
 
 ```typescript
 // server/modules/queues/emailQueue.ts
-import { Queue, Worker, QueueEvents } from "bullmq";
-import { redisClient } from "../utils/redis";
-import { logger } from "../utils/logger";
+import { Queue, Worker, QueueEvents } from 'bullmq';
+import { redisClient } from '../utils/redis';
+import { logger } from '../utils/logger';
 
-export const emailQueue = new Queue("emails", {
+export const emailQueue = new Queue('emails', {
   connection: redisClient,
   defaultJobOptions: {
-    attempts: 3,                          // retry up to 3 times
-    backoff: { type: "exponential", delay: 2000 },
-    removeOnComplete: { count: 100 },     // keep last 100 completed
-    removeOnFail:     { count: 500 },     // keep last 500 failed for inspection
+    attempts: 3, // retry up to 3 times
+    backoff: { type: 'exponential', delay: 2000 },
+    removeOnComplete: { count: 100 }, // keep last 100 completed
+    removeOnFail: { count: 500 }, // keep last 500 failed for inspection
   },
 });
 
-export const emailWorker = new Worker("emails", async (job) => {
-  const { to, template, data } = job.data;
-  await emailService.send(to, template, data);
-}, { connection: redisClient, concurrency: 5 });
+export const emailWorker = new Worker(
+  'emails',
+  async (job) => {
+    const { to, template, data } = job.data;
+    await emailService.send(to, template, data);
+  },
+  { connection: redisClient, concurrency: 5 },
+);
 
 // Log failures — alert on repeated failures in production
-emailWorker.on("failed", (job, err) => {
-  logger.error({ jobId: job?.id, queue: "emails", err }, "Job failed");
+emailWorker.on('failed', (job, err) => {
+  logger.error({ jobId: job?.id, queue: 'emails', err }, 'Job failed');
 });
 
-emailWorker.on("error", (err) => {
-  logger.error({ queue: "emails", err }, "Worker error");
+emailWorker.on('error', (err) => {
+  logger.error({ queue: 'emails', err }, 'Worker error');
 });
 ```
 
@@ -948,32 +950,32 @@ emailWorker.on("error", (err) => {
 
 ```typescript
 // server/modules/health/health.controller.ts
-import { Request, Response } from "express";
-import { getDb } from "../db";
-import { redisClient } from "../utils/redis";
+import { Request, Response } from 'express';
+import { getDb } from '../db';
+import { redisClient } from '../utils/redis';
 
 export async function healthCheck(req: Request, res: Response) {
-  const checks: Record<string, "ok" | "fail"> = {};
+  const checks: Record<string, 'ok' | 'fail'> = {};
 
   // Check DB
   try {
-    await getDb().execute("SELECT 1");
-    checks.database = "ok";
+    await getDb().execute('SELECT 1');
+    checks.database = 'ok';
   } catch {
-    checks.database = "fail";
+    checks.database = 'fail';
   }
 
   // Check Redis
   try {
     await redisClient.ping();
-    checks.redis = "ok";
+    checks.redis = 'ok';
   } catch {
-    checks.redis = "fail";
+    checks.redis = 'fail';
   }
 
-  const allHealthy = Object.values(checks).every((v) => v === "ok");
+  const allHealthy = Object.values(checks).every((v) => v === 'ok');
   return res.status(allHealthy ? 200 : 503).json({
-    status: allHealthy ? "healthy" : "degraded",
+    status: allHealthy ? 'healthy' : 'degraded',
     checks,
     timestamp: new Date().toISOString(),
   });
@@ -982,7 +984,7 @@ export async function healthCheck(req: Request, res: Response) {
 
 ```typescript
 // server/routes.ts — exempt from auth and rate limiting
-app.get("/api/health", healthCheck);
+app.get('/api/health', healthCheck);
 ```
 
 ---
@@ -993,13 +995,13 @@ app.get("/api/health", healthCheck);
 
 ```typescript
 // server/modules/middleware/requestLogger.ts
-import pino from "pino";
-import { v4 as uuidv4 } from "uuid";
+import pino from 'pino';
+import { v4 as uuidv4 } from 'uuid';
 
-const logger = pino({ level: process.env.LOG_LEVEL || "info" });
+const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
 export function requestLogger(req, res, next) {
-  const correlationId = req.headers["x-correlation-id"] as string || uuidv4();
+  const correlationId = (req.headers['x-correlation-id'] as string) || uuidv4();
   req.log = logger.child({
     correlationId,
     tenantId: req.tenantId,
@@ -1007,7 +1009,7 @@ export function requestLogger(req, res, next) {
     method: req.method,
     path: req.path,
   });
-  res.setHeader("x-correlation-id", correlationId);
+  res.setHeader('x-correlation-id', correlationId);
   next();
 }
 ```
@@ -1021,9 +1023,9 @@ export function requestLogger(req, res, next) {
 export interface AuditEvent {
   tenantId: string;
   userId: string;
-  action: string;         // "entity.created", "entity.deleted"
-  resourceType: string;   // "invoice", "contact"
-  resourceId: string;     // UUID of affected record
+  action: string; // "entity.created", "entity.deleted"
+  resourceType: string; // "invoice", "contact"
+  resourceId: string; // UUID of affected record
   before?: unknown;
   after?: unknown;
   ipAddress?: string;
@@ -1044,8 +1046,11 @@ Call from the **service layer** on every write operation:
 
 ```typescript
 await auditService.log({
-  tenantId, userId, action: "invoice.created",
-  resourceType: "invoice", resourceId: created.uuid,
+  tenantId,
+  userId,
+  action: 'invoice.created',
+  resourceType: 'invoice',
+  resourceId: created.uuid,
   after: created,
 });
 ```
@@ -1058,16 +1063,16 @@ await auditService.log({
 
 ```typescript
 // server/modules/utils/cache.ts
-import { redisClient } from "./redis";
+import { redisClient } from './redis';
 
 export function tenantCacheKey(tenantId: string, ...parts: string[]): string {
-  return `t:${tenantId}:${parts.join(":")}`;
+  return `t:${tenantId}:${parts.join(':')}`;
 }
 
 export async function withCache<T>(
   key: string,
   ttlSeconds: number,
-  fetcher: () => Promise<T>
+  fetcher: () => Promise<T>,
 ): Promise<T> {
   const cached = await redisClient.get(key);
   if (cached) return JSON.parse(cached) as T;
@@ -1077,22 +1082,23 @@ export async function withCache<T>(
 }
 
 export async function invalidateTenantCache(tenantId: string, pattern: string) {
-  const keys = await redisClient.keys(tenantCacheKey(tenantId, pattern, "*"));
+  const keys = await redisClient.keys(tenantCacheKey(tenantId, pattern, '*'));
   if (keys.length > 0) await redisClient.del(keys);
 }
 ```
 
 **Cache TTL Guidelines:**
 
-| Data Type | TTL |
-|---|---|
-| User session data | 15 minutes |
-| Master/lookup lists | 1 hour |
-| Configuration data | 24 hours |
-| Computed analytics | 5 minutes |
+| Data Type                   | TTL          |
+| --------------------------- | ------------ |
+| User session data           | 15 minutes   |
+| Master/lookup lists         | 1 hour       |
+| Configuration data          | 24 hours     |
+| Computed analytics          | 5 minutes    |
 | Frequently mutated entities | Do NOT cache |
 
 **Rules:**
+
 - Always use `tenantCacheKey()` — never raw keys
 - Invalidate cache in every mutation service
 - NEVER cache with raw tenant IDs — always scope via `tenantCacheKey()`
@@ -1107,30 +1113,31 @@ Every table MUST spread `...auditColumns`. This is the **single source of truth*
 
 ```typescript
 // shared/modules/schema/audit.ts
-import { boolean, integer, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, text, timestamp } from 'drizzle-orm/pg-core';
 
 export const auditColumns = {
-  sort_order:       integer("sort_order").default(0),
-  created_at:       timestamp("created_at").defaultNow(),
-  updated_at:       timestamp("updated_at").defaultNow(),
-  created_by_uuid:  text("created_by_uuid"),
-  updated_by_uuid:  text("updated_by_uuid"),
-  is_deleted:       boolean("is_deleted").default(false),
-  is_sync:          boolean("is_sync").default(false),
+  sort_order: integer('sort_order').default(0),
+  created_at: timestamp('created_at').defaultNow(),
+  updated_at: timestamp('updated_at').defaultNow(),
+  created_by_uuid: text('created_by_uuid'),
+  updated_by_uuid: text('updated_by_uuid'),
+  is_deleted: boolean('is_deleted').default(false),
+  is_sync: boolean('is_sync').default(false),
 };
 ```
 
-| Column | Type | Purpose |
-|---|---|---|
-| `sort_order` | `integer` (default `0`) | Client-side ordering / drag-and-drop positioning |
-| `created_at` | `timestamp` (default `now()`) | Record creation time — never updated after insert |
-| `updated_at` | `timestamp` (default `now()`) | Last modification time — updated on every PATCH/PUT |
-| `created_by_uuid` | `text` | UUID of the user who created the record |
-| `updated_by_uuid` | `text` | UUID of the user who last modified the record |
-| `is_deleted` | `boolean` (default `false`) | Soft delete flag — never hard DELETE in production |
-| `is_sync` | `boolean` (default `false`) | Sync status flag for offline/external system sync |
+| Column            | Type                          | Purpose                                             |
+| ----------------- | ----------------------------- | --------------------------------------------------- |
+| `sort_order`      | `integer` (default `0`)       | Client-side ordering / drag-and-drop positioning    |
+| `created_at`      | `timestamp` (default `now()`) | Record creation time — never updated after insert   |
+| `updated_at`      | `timestamp` (default `now()`) | Last modification time — updated on every PATCH/PUT |
+| `created_by_uuid` | `text`                        | UUID of the user who created the record             |
+| `updated_by_uuid` | `text`                        | UUID of the user who last modified the record       |
+| `is_deleted`      | `boolean` (default `false`)   | Soft delete flag — never hard DELETE in production  |
+| `is_sync`         | `boolean` (default `false`)   | Sync status flag for offline/external system sync   |
 
 **Audit Column Rules:**
+
 - `created_at` and `created_by_uuid` are set ONCE at insert and NEVER updated
 - `updated_at` and `updated_by_uuid` are updated on EVERY mutation
 - Repository layer is responsible for setting these — never trust client input
@@ -1142,14 +1149,17 @@ export const auditColumns = {
 
 ```typescript
 // shared/modules/schema/<module>.ts
-import { pgTable, serial, text, boolean, timestamp, integer } from "drizzle-orm/pg-core";
-import { auditColumns } from "./audit";
+import { pgTable, serial, text, boolean, timestamp, integer } from 'drizzle-orm/pg-core';
+import { auditColumns } from './audit';
 
-export const myEntitiesV2 = pgTable("my_entities_v2", {
-  id:           serial("id").primaryKey(),
-  uuid:         text("uuid").notNull().unique().$defaultFn(() => crypto.randomUUID()),
-  name:         text("name").notNull(),
-  ...auditColumns,   // ← spreads all 7 audit columns automatically
+export const myEntitiesV2 = pgTable('my_entities_v2', {
+  id: serial('id').primaryKey(),
+  uuid: text('uuid')
+    .notNull()
+    .unique()
+    .$defaultFn(() => crypto.randomUUID()),
+  name: text('name').notNull(),
+  ...auditColumns, // ← spreads all 7 audit columns automatically
 });
 ```
 
@@ -1167,34 +1177,43 @@ CREATE INDEX idx_my_entities_v2_active     ON my_entities_v2(is_deleted) WHERE i
 
 ```typescript
 // ❌ WRONG — storing structured data as JSON
-export const ordersV2 = pgTable("orders_v2", {
-  id:       serial("id").primaryKey(),
-  uuid:     text("uuid").notNull().unique(),
-  items:    jsonb("items"),          // ← NEVER DO THIS
-  metadata: jsonb("metadata"),       // ← NEVER DO THIS
+export const ordersV2 = pgTable('orders_v2', {
+  id: serial('id').primaryKey(),
+  uuid: text('uuid').notNull().unique(),
+  items: jsonb('items'), // ← NEVER DO THIS
+  metadata: jsonb('metadata'), // ← NEVER DO THIS
   ...auditColumns,
 });
 
 // ✅ CORRECT — normalize into separate tables with proper columns
-export const ordersV2 = pgTable("orders_v2", {
-  id:       serial("id").primaryKey(),
-  uuid:     text("uuid").notNull().unique().$defaultFn(() => crypto.randomUUID()),
-  status:   text("status").notNull(),
+export const ordersV2 = pgTable('orders_v2', {
+  id: serial('id').primaryKey(),
+  uuid: text('uuid')
+    .notNull()
+    .unique()
+    .$defaultFn(() => crypto.randomUUID()),
+  status: text('status').notNull(),
   ...auditColumns,
 });
 
-export const orderItemsV2 = pgTable("order_items_v2", {
-  id:            serial("id").primaryKey(),
-  uuid:          text("uuid").notNull().unique().$defaultFn(() => crypto.randomUUID()),
-  order_uuid:    text("order_uuid").notNull().references(() => ordersV2.uuid),
-  product_name:  text("product_name").notNull(),
-  quantity:      integer("quantity").notNull(),
-  unit_price:    integer("unit_price").notNull(),
+export const orderItemsV2 = pgTable('order_items_v2', {
+  id: serial('id').primaryKey(),
+  uuid: text('uuid')
+    .notNull()
+    .unique()
+    .$defaultFn(() => crypto.randomUUID()),
+  order_uuid: text('order_uuid')
+    .notNull()
+    .references(() => ordersV2.uuid),
+  product_name: text('product_name').notNull(),
+  quantity: integer('quantity').notNull(),
+  unit_price: integer('unit_price').notNull(),
   ...auditColumns,
 });
 ```
 
 **Why it matters:**
+
 - JSON columns cannot have foreign keys → orphaned/invalid data
 - JSON columns cannot be indexed efficiently → full table scans at scale
 - JSON columns have no schema enforcement → garbage data silently accepted
@@ -1210,25 +1229,33 @@ Every relationship between tables MUST use a proper foreign key constraint refer
 
 ```typescript
 // ✅ CORRECT — FK constraint on uuid column
-export const invoiceItemsV2 = pgTable("invoice_items_v2", {
-  id:            serial("id").primaryKey(),
-  uuid:          text("uuid").notNull().unique().$defaultFn(() => crypto.randomUUID()),
-  invoice_uuid:  text("invoice_uuid").notNull().references(() => invoicesV2.uuid),
-  product_uuid:  text("product_uuid").notNull().references(() => productsV2.uuid),
-  quantity:      integer("quantity").notNull(),
+export const invoiceItemsV2 = pgTable('invoice_items_v2', {
+  id: serial('id').primaryKey(),
+  uuid: text('uuid')
+    .notNull()
+    .unique()
+    .$defaultFn(() => crypto.randomUUID()),
+  invoice_uuid: text('invoice_uuid')
+    .notNull()
+    .references(() => invoicesV2.uuid),
+  product_uuid: text('product_uuid')
+    .notNull()
+    .references(() => productsV2.uuid),
+  quantity: integer('quantity').notNull(),
   ...auditColumns,
 });
 
 // ❌ WRONG — plain text column with no FK constraint
-export const invoiceItemsV2 = pgTable("invoice_items_v2", {
-  id:            serial("id").primaryKey(),
-  invoice_uuid:  text("invoice_uuid").notNull(),   // ← NO FK = orphaned rows
-  product_uuid:  text("product_uuid").notNull(),   // ← NO FK = invalid references
+export const invoiceItemsV2 = pgTable('invoice_items_v2', {
+  id: serial('id').primaryKey(),
+  invoice_uuid: text('invoice_uuid').notNull(), // ← NO FK = orphaned rows
+  product_uuid: text('product_uuid').notNull(), // ← NO FK = invalid references
   ...auditColumns,
 });
 ```
 
 **FK Naming Convention:**
+
 - Column name: `<parent_entity>_uuid` (e.g., `vessel_uuid`, `crew_uuid`)
 - Always reference the `uuid` column of the parent, not the `id`
 - Use `onDelete` behavior explicitly when needed:
@@ -1282,6 +1309,7 @@ CREATE INDEX idx_invoices_v2_status ON invoices_v2(status, created_at DESC);
 ```
 
 **Indexing Rules:**
+
 - Every foreign key column (`*_uuid`) MUST have an index
 - Every column used in `WHERE` clauses MUST be evaluated for indexing
 - Use **partial indexes** (`WHERE is_deleted = false`) for tables with soft delete
@@ -1298,26 +1326,30 @@ This project stores files (images, PDFs, documents) as **base64-encoded text** d
 
 ```typescript
 // ✅ CORRECT — store base64 with full metadata
-export const documentsV2 = pgTable("documents_v2", {
-  id:           serial("id").primaryKey(),
-  uuid:         text("uuid").notNull().unique().$defaultFn(() => crypto.randomUUID()),
-  file_name:    text("file_name").notNull(),          // original filename: "report.pdf"
-  file_data:    text("file_data").notNull(),           // base64-encoded file content
-  file_size:    integer("file_size").notNull(),        // size in bytes (before encoding)
-  mime_type:    text("mime_type").notNull(),            // "application/pdf", "image/png"
+export const documentsV2 = pgTable('documents_v2', {
+  id: serial('id').primaryKey(),
+  uuid: text('uuid')
+    .notNull()
+    .unique()
+    .$defaultFn(() => crypto.randomUUID()),
+  file_name: text('file_name').notNull(), // original filename: "report.pdf"
+  file_data: text('file_data').notNull(), // base64-encoded file content
+  file_size: integer('file_size').notNull(), // size in bytes (before encoding)
+  mime_type: text('mime_type').notNull(), // "application/pdf", "image/png"
   ...auditColumns,
 });
 
 // ❌ WRONG — storing base64 without metadata
-export const documentsV2 = pgTable("documents_v2", {
-  id:           serial("id").primaryKey(),
-  uuid:         text("uuid").notNull().unique(),
-  file_data:    text("file_data"),           // ← NO file_name, file_size, mime_type
+export const documentsV2 = pgTable('documents_v2', {
+  id: serial('id').primaryKey(),
+  uuid: text('uuid').notNull().unique(),
+  file_data: text('file_data'), // ← NO file_name, file_size, mime_type
   ...auditColumns,
 });
 ```
 
 **File Storage Rules:**
+
 - Always store `file_name`, `file_data` (base64), `file_size`, and `mime_type` together
 - Validate `mime_type` against an allow-list before saving (prevent uploading executables)
 - Set a **max upload size** (e.g., 10MB) validated on both client and server
@@ -1406,6 +1438,7 @@ async getOrdersWithItems(tenantId: string) {
 ```
 
 **N+1 Prevention Rules:**
+
 - **NEVER** call `db.select()` or `db.query()` inside a `for` / `forEach` / `map` loop
 - Use `inArray()` for batch loading related records in a second query
 - Use `LEFT JOIN` when you need parent + children in a single query
@@ -1415,6 +1448,7 @@ async getOrdersWithItems(tenantId: string) {
 ---
 
 **Database Rules:**
+
 - Every table has `id` (serial PK) + `uuid` (text unique)
 - Every table spreads `...auditColumns` (all 7 standard columns)
 - `created_by_uuid` and `updated_by_uuid` populated in repository
@@ -1441,12 +1475,9 @@ export interface PaginationParams {
   offset: number;
 }
 
-export function normalizePagination(query: {
-  page?: string;
-  limit?: string;
-}): PaginationParams {
-  const page  = Math.max(1, parseInt(query.page  || "1",  10));
-  const limit = Math.min(100, Math.max(1, parseInt(query.limit || "20", 10)));
+export function normalizePagination(query: { page?: string; limit?: string }): PaginationParams {
+  const page = Math.max(1, parseInt(query.page || '1', 10));
+  const limit = Math.min(100, Math.max(1, parseInt(query.limit || '20', 10)));
   return { page, limit, offset: (page - 1) * limit };
 }
 ```
@@ -1481,6 +1512,7 @@ All TypeScript code MUST compile under strict mode. Add to `tsconfig.json`:
 ```
 
 **Rules:**
+
 - `strict: true` enables `strictNullChecks`, `strictFunctionTypes`, `noImplicitAny` — all required
 - `noUncheckedIndexedAccess` prevents `array[0]` returning `T` when it could be `undefined`
 - NEVER use `// @ts-ignore` — fix the type properly
@@ -1521,8 +1553,8 @@ export class MyEntityController {
       const result = await myEntityService.create(req.tenantId, req.user!.uuid, validated);
       return res.status(201).json(result);
     } catch (error) {
-      req.log.error({ error }, "Failed to create entity");
-      return res.status(500).json({ error: "Internal server error" });
+      req.log.error({ error }, 'Failed to create entity');
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 }
@@ -1540,15 +1572,19 @@ export class MyEntityController {
 
 ```typescript
 // server/modules/queues/emailQueue.ts
-import { Queue, Worker } from "bullmq";
-import { redisClient } from "../utils/redis";
+import { Queue, Worker } from 'bullmq';
+import { redisClient } from '../utils/redis';
 
-export const emailQueue = new Queue("emails", { connection: redisClient });
+export const emailQueue = new Queue('emails', { connection: redisClient });
 
-export const emailWorker = new Worker("emails", async (job) => {
-  const { to, template, data } = job.data;
-  await emailService.send(to, template, data);
-}, { connection: redisClient, concurrency: 5 });
+export const emailWorker = new Worker(
+  'emails',
+  async (job) => {
+    const { to, template, data } = job.data;
+    await emailService.send(to, template, data);
+  },
+  { connection: redisClient, concurrency: 5 },
+);
 ```
 
 **Rule:** NEVER call slow APIs or send emails inline in requests. Queue via BullMQ and return `202 Accepted`.
@@ -1573,19 +1609,19 @@ export const emailWorker = new Worker("emails", async (job) => {
 ```typescript
 // ✅ CORRECT — useMutation with onError handler
 const createInvoice = useMutation({
-  mutationFn: (data: CreateInvoiceDto) => apiRequest("POST", "/api/v2/invoices", data),
+  mutationFn: (data: CreateInvoiceDto) => apiRequest('POST', '/api/v2/invoices', data),
   onSuccess: () => {
-    toast({ title: "Invoice created", variant: "default" });
-    queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    toast({ title: 'Invoice created', variant: 'default' });
+    queryClient.invalidateQueries({ queryKey: ['invoices'] });
   },
   onError: (error: ApiError) => {
     // Show field-level errors if available (from Zod 400)
-    if (error.code === "VALIDATION_ERROR" && error.details) {
+    if (error.code === 'VALIDATION_ERROR' && error.details) {
       Object.entries(error.details).forEach(([field, messages]) => {
         form.setError(field as keyof CreateInvoiceDto, { message: messages[0] });
       });
     } else {
-      toast({ title: error.message ?? "Something went wrong", variant: "destructive" });
+      toast({ title: error.message ?? 'Something went wrong', variant: 'destructive' });
     }
   },
 });
@@ -1625,6 +1661,7 @@ export class ModuleErrorBoundary extends Component<
 ```
 
 **Frontend Error Rules:**
+
 - Every `useMutation` MUST have an `onError` handler with a toast notification
 - Every `useQuery` MUST handle the `error` state — never leave it unrendered
 - NEVER silently swallow errors (`catch (e) {}` with no action)
@@ -1636,43 +1673,43 @@ export class ModuleErrorBoundary extends Component<
 
 ```typescript
 // server/modules/<module>/<module>.test.ts
-describe("MyModule", () => {
+describe('MyModule', () => {
   let tenantId: string;
   let token: string;
 
   beforeAll(async () => {
     tenantId = await createTestTenant();
-    token = generateTestToken({ tenantId, userType: "manager" });
+    token = generateTestToken({ tenantId, userType: 'manager' });
   });
 
   afterAll(async () => {
     await cleanupTestTenant(tenantId);
   });
 
-  describe("GET /api/v2/my-module/entities", () => {
-    it("returns paginated list", async () => {
+  describe('GET /api/v2/my-module/entities', () => {
+    it('returns paginated list', async () => {
       const res = await request(app)
-        .get("/api/v2/my-module/entities")
-        .set("Authorization", `Bearer ${token}`)
-        .set("x-tenant-id", tenantId);
+        .get('/api/v2/my-module/entities')
+        .set('Authorization', `Bearer ${token}`)
+        .set('x-tenant-id', tenantId);
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty("data");
-      expect(res.body).toHaveProperty("total");
-      expect(res.body).toHaveProperty("hasMore");
+      expect(res.body).toHaveProperty('data');
+      expect(res.body).toHaveProperty('total');
+      expect(res.body).toHaveProperty('hasMore');
     });
 
-    it("returns 401 without token", async () => {
-      const res = await request(app).get("/api/v2/my-module/entities");
+    it('returns 401 without token', async () => {
+      const res = await request(app).get('/api/v2/my-module/entities');
       expect(res.status).toBe(401);
     });
 
-    it("returns 403 for viewer on protected route", async () => {
-      const viewerToken = generateTestToken({ tenantId, userType: "viewer" });
+    it('returns 403 for viewer on protected route', async () => {
+      const viewerToken = generateTestToken({ tenantId, userType: 'viewer' });
       const res = await request(app)
-        .post("/api/v2/my-module/entities")
-        .set("Authorization", `Bearer ${viewerToken}`)
-        .set("x-tenant-id", tenantId)
-        .send({ name: "test" });
+        .post('/api/v2/my-module/entities')
+        .set('Authorization', `Bearer ${viewerToken}`)
+        .set('x-tenant-id', tenantId)
+        .send({ name: 'test' });
       expect(res.status).toBe(403);
     });
   });
@@ -1680,6 +1717,7 @@ describe("MyModule", () => {
 ```
 
 **Testing Rules:**
+
 - Controller integration tests must cover: 200, 400, 401, 403, 404
 - Service unit tests must cover: happy path + all error branches
 - Each test suite uses isolated test tenant via `createTestTenant()`
@@ -1692,6 +1730,7 @@ describe("MyModule", () => {
 Before submitting any new module, verify every item:
 
 ### Error Handling
+
 - [ ] `AppError` / `NotFoundError` / `ValidationError` used — no raw `Error` throws
 - [ ] `globalErrorHandler` registered as last middleware in `server/index.ts`
 - [ ] No stack traces or DB errors exposed in API responses
@@ -1699,28 +1738,34 @@ Before submitting any new module, verify every item:
 - [ ] Zod errors caught by `globalErrorHandler` → 400 with field details
 
 ### API Response Shape
+
 - [ ] All success responses use `successResponse()` or `paginatedResponse()` helpers
 - [ ] HTTP status codes match the standard table (201 for create, 202 for async, etc.)
 
 ### Transactions
+
 - [ ] Any service writing to 2+ tables uses `withTransaction()`
 - [ ] Repository methods accept an optional `tx` parameter
 
 ### Environment
+
 - [ ] All required env vars declared in `env.ts` Zod schema
 - [ ] `env.ts` imported first in `server/index.ts`
 
 ### Shutdown & Jobs
+
 - [ ] `registerGracefulShutdown()` called in `server/index.ts`
 - [ ] BullMQ queues define `attempts`, `backoff`, and `removeOnFail`
 - [ ] Worker `failed` and `error` events are logged
 
 ### TypeScript
+
 - [ ] `strict: true` in `tsconfig.json`
 - [ ] No `any` types, no `@ts-ignore`
 - [ ] `noImplicitReturns: true` — all code paths return a value
 
 ### Security
+
 - [ ] Every route has explicit `requireRole()` middleware
 - [ ] Global rate limiter applied via `globalRateLimiter` middleware
 - [ ] Auth endpoints use `authRateLimiter`
@@ -1729,17 +1774,20 @@ Before submitting any new module, verify every item:
 - [ ] All list endpoints use `normalizePagination()` — no unbounded queries
 
 ### Observability
+
 - [ ] All controller errors use `req.log` (not `console.error`)
 - [ ] All write operations emit `auditService.log()`
 - [ ] Correlation ID passed through request lifecycle
 - [ ] Health check endpoint updated for new service dependencies
 
 ### Caching
+
 - [ ] Master/lookup data cached with `withCache()` + `tenantCacheKey()`
 - [ ] Cache invalidated in mutation services (`invalidateTenantCache`)
 - [ ] TTL appropriate for data type
 
 ### Database
+
 - [ ] Every table has `id` (serial PK) + `uuid` (text unique)
 - [ ] Every table spreads `...auditColumns` (all 7 standard columns from `audit.ts`)
 - [ ] `created_by_uuid` / `updated_by_uuid` set in repository — never from client input
@@ -1758,6 +1806,7 @@ Before submitting any new module, verify every item:
 - [ ] **No N+1 queries** — uses `inArray()` batch loading or JOINs, never queries in loops
 
 ### Backend
+
 - [ ] All new code is under `server/modules/<module>/`
 - [ ] Nothing added to `storage.ts`, `database.ts`, or `shared/schema.ts`
 - [ ] Every repository uses `getDb()` from `server/modules/db.ts`
@@ -1771,12 +1820,14 @@ Before submitting any new module, verify every item:
 - [ ] Routes mounted in `server/routes.ts` via `app.use()`
 
 ### Tests
+
 - [ ] Controller integration tests cover: 200, 400, 401, 403, 404
 - [ ] Service unit tests cover: happy path + all error branches
 - [ ] Test uses isolated test tenant (not shared tenant)
 - [ ] Test token generated with `generateTestToken()` utility
 
 ### Frontend
+
 - [ ] Module lives in `client/src/modules/<module>/`
 - [ ] API client uses `apiRequest()` from `@/lib/queryClient`
 - [ ] No manual header injection
@@ -1789,6 +1840,7 @@ Before submitting any new module, verify every item:
 - [ ] Types imported from `@shared/modules/<module>/types`
 
 ### Multi-Tenancy
+
 - [ ] Repository uses `getDb()` — not direct pool/db import
 - [ ] No manual `x-tenant-id` reading — middleware handles it
 - [ ] No `tenant_id` column in tables (isolation is at DB level)
@@ -1800,39 +1852,39 @@ Before submitting any new module, verify every item:
 
 ## ❌ DON'Ts
 
-| # | ❌ DON'T | Why | ✅ DO Instead |
-|---|---|---|---|
-| 1 | Add routes without `requireRole()` | Any logged-in user can call admin endpoints | Every route explicitly declares minimum required role |
-| 2 | Return unbounded lists from `getAll()` | OOM at scale, DB timeout | Always use `normalizePagination()` with enforced max |
-| 3 | Use `console.log/error` in controllers | No tenant/correlation context | Use `req.log.info/error()` from `pino` |
-| 4 | Write audit logic in controllers | Duplicated, inconsistent | Call `auditService.log()` from the service layer |
-| 5 | Create cache keys without tenant scope | Tenant A sees Tenant B's data | Always prefix with `tenantCacheKey(tenantId, ...)` |
-| 6 | Open direct DB pool per tenant without limits | 50 tenants × 20 connections = DB crash | Set `max: 5` per tenant pool, use PgBouncer |
-| 7 | Call slow APIs / send emails inline in requests | P99 response time explodes | Queue via BullMQ, return `202 Accepted` |
-| 8 | Skip error boundaries on module routes | One bad module crashes entire app | Every lazy-loaded route wrapped in `<ModuleErrorBoundary>` |
-| 9 | Write tests against shared tenant | Tests interfere, flaky | Each test suite creates isolated tenant via `createTestTenant()` |
-| 10 | Deploy without health check | Load balancer routes to dead instances | `/api/health` checks DB + Redis + returns 503 when degraded |
-| 11 | Add business logic to controllers | Violates separation of concerns | Move to service layer |
-| 12 | Add req/res references to services | Breaks testability | Services are pure — no HTTP context |
-| 13 | Use `any` types | Defeats TypeScript safety | Use proper types or generics |
-| 14 | Modify existing migration files | Breaks deployed environments | Always create new migration files |
-| 15 | Hard DELETE records in production | Unrecoverable data loss | Use `is_deleted = true` soft delete |
-| 16 | Throw raw `new Error("...")` in services | No HTTP mapping, no machine-readable code | Throw `NotFoundError`, `ValidationError`, or `AppError` |
-| 17 | Catch errors in controllers to manually respond | Bypasses `globalErrorHandler`, inconsistent shape | Let errors propagate — `globalErrorHandler` formats everything |
-| 18 | Expose DB error messages or stack traces in responses | Leaks schema/internals to clients | `globalErrorHandler` returns only `code` + `message` |
-| 19 | Write to multiple tables without a transaction | Partial write = silent data corruption | Wrap in `withTransaction()` |
-| 20 | Boot the app without validating env vars | Runtime crash deep inside a user request | Validate all env vars in `env.ts` at startup with Zod |
-| 21 | Use `// @ts-ignore` or `as any` | Defeats TypeScript safety, hides real bugs | Fix the type properly or use `unknown` + type guard |
-| 22 | Define BullMQ jobs without retry config | One transient error permanently loses the job | Set `attempts`, `backoff`, and `removeOnFail` on every queue |
-| 23 | Leave `useMutation` without an `onError` handler | User sees no feedback on failure | Every mutation has `onError` with a toast notification |
-| 24 | Return `null` from a service when a record is expected | Caller can't distinguish 404 from error | Throw `NotFoundError` — never return null for expected records |
-| 25 | Use `json` / `jsonb` columns for structured data | No FK enforcement, no indexing, no schema validation | Normalize into proper relational tables with typed columns |
-| 26 | Store FK references as plain text without `.references()` | Orphaned rows, no referential integrity | Every FK column uses `.references(() => parent.uuid)` with `onDelete` |
-| 27 | Create tables without indexes on FK / filter columns | Full table scans at scale, queries degrade exponentially | Index every FK column, every `WHERE` column, use composite indexes |
-| 28 | Store base64 files without metadata columns | No way to filter by type, unknown file sizes | Always include `file_name`, `file_data`, `file_size`, `mime_type` |
-| 28b | Include `file_data` in list/getAll queries | Pulls MB of base64 per row, OOM risk at scale | Exclude `file_data` from list queries — fetch only on single-record GET |
-| 29 | Execute DB queries inside loops (N+1) | 100 records = 101 queries, API latency explodes | Use `inArray()` batch loading or JOINs — never query in a loop |
-| 30 | Redefine audit columns per table manually | Inconsistent columns, missing fields | Always spread `...auditColumns` from `shared/modules/schema/audit.ts` |
+| #   | ❌ DON'T                                                  | Why                                                      | ✅ DO Instead                                                           |
+| --- | --------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 1   | Add routes without `requireRole()`                        | Any logged-in user can call admin endpoints              | Every route explicitly declares minimum required role                   |
+| 2   | Return unbounded lists from `getAll()`                    | OOM at scale, DB timeout                                 | Always use `normalizePagination()` with enforced max                    |
+| 3   | Use `console.log/error` in controllers                    | No tenant/correlation context                            | Use `req.log.info/error()` from `pino`                                  |
+| 4   | Write audit logic in controllers                          | Duplicated, inconsistent                                 | Call `auditService.log()` from the service layer                        |
+| 5   | Create cache keys without tenant scope                    | Tenant A sees Tenant B's data                            | Always prefix with `tenantCacheKey(tenantId, ...)`                      |
+| 6   | Open direct DB pool per tenant without limits             | 50 tenants × 20 connections = DB crash                   | Set `max: 5` per tenant pool, use PgBouncer                             |
+| 7   | Call slow APIs / send emails inline in requests           | P99 response time explodes                               | Queue via BullMQ, return `202 Accepted`                                 |
+| 8   | Skip error boundaries on module routes                    | One bad module crashes entire app                        | Every lazy-loaded route wrapped in `<ModuleErrorBoundary>`              |
+| 9   | Write tests against shared tenant                         | Tests interfere, flaky                                   | Each test suite creates isolated tenant via `createTestTenant()`        |
+| 10  | Deploy without health check                               | Load balancer routes to dead instances                   | `/api/health` checks DB + Redis + returns 503 when degraded             |
+| 11  | Add business logic to controllers                         | Violates separation of concerns                          | Move to service layer                                                   |
+| 12  | Add req/res references to services                        | Breaks testability                                       | Services are pure — no HTTP context                                     |
+| 13  | Use `any` types                                           | Defeats TypeScript safety                                | Use proper types or generics                                            |
+| 14  | Modify existing migration files                           | Breaks deployed environments                             | Always create new migration files                                       |
+| 15  | Hard DELETE records in production                         | Unrecoverable data loss                                  | Use `is_deleted = true` soft delete                                     |
+| 16  | Throw raw `new Error("...")` in services                  | No HTTP mapping, no machine-readable code                | Throw `NotFoundError`, `ValidationError`, or `AppError`                 |
+| 17  | Catch errors in controllers to manually respond           | Bypasses `globalErrorHandler`, inconsistent shape        | Let errors propagate — `globalErrorHandler` formats everything          |
+| 18  | Expose DB error messages or stack traces in responses     | Leaks schema/internals to clients                        | `globalErrorHandler` returns only `code` + `message`                    |
+| 19  | Write to multiple tables without a transaction            | Partial write = silent data corruption                   | Wrap in `withTransaction()`                                             |
+| 20  | Boot the app without validating env vars                  | Runtime crash deep inside a user request                 | Validate all env vars in `env.ts` at startup with Zod                   |
+| 21  | Use `// @ts-ignore` or `as any`                           | Defeats TypeScript safety, hides real bugs               | Fix the type properly or use `unknown` + type guard                     |
+| 22  | Define BullMQ jobs without retry config                   | One transient error permanently loses the job            | Set `attempts`, `backoff`, and `removeOnFail` on every queue            |
+| 23  | Leave `useMutation` without an `onError` handler          | User sees no feedback on failure                         | Every mutation has `onError` with a toast notification                  |
+| 24  | Return `null` from a service when a record is expected    | Caller can't distinguish 404 from error                  | Throw `NotFoundError` — never return null for expected records          |
+| 25  | Use `json` / `jsonb` columns for structured data          | No FK enforcement, no indexing, no schema validation     | Normalize into proper relational tables with typed columns              |
+| 26  | Store FK references as plain text without `.references()` | Orphaned rows, no referential integrity                  | Every FK column uses `.references(() => parent.uuid)` with `onDelete`   |
+| 27  | Create tables without indexes on FK / filter columns      | Full table scans at scale, queries degrade exponentially | Index every FK column, every `WHERE` column, use composite indexes      |
+| 28  | Store base64 files without metadata columns               | No way to filter by type, unknown file sizes             | Always include `file_name`, `file_data`, `file_size`, `mime_type`       |
+| 28b | Include `file_data` in list/getAll queries                | Pulls MB of base64 per row, OOM risk at scale            | Exclude `file_data` from list queries — fetch only on single-record GET |
+| 29  | Execute DB queries inside loops (N+1)                     | 100 records = 101 queries, API latency explodes          | Use `inArray()` batch loading or JOINs — never query in a loop          |
+| 30  | Redefine audit columns per table manually                 | Inconsistent columns, missing fields                     | Always spread `...auditColumns` from `shared/modules/schema/audit.ts`   |
 
 ---
 
@@ -1872,16 +1924,15 @@ Before submitting any new module, verify every item:
 
 ### Scaling Thresholds
 
-| Component | < 10 Clients | 10–50 Clients | 50+ Clients |
-|---|---|---|---|
-| DB Connections | Direct pool per tenant | PgBouncer required | PgBouncer + read replicas |
-| Caching | Optional | Redis required | Redis Cluster |
-| Background Jobs | Inline | BullMQ + 1 worker | BullMQ + dedicated worker fleet |
-| App Servers | 1 instance | 2 instances (HA) | Auto-scaling group |
-| Monitoring | Logs only | Logs + metrics | Full APM (Datadog/Grafana) |
+| Component       | < 10 Clients           | 10–50 Clients      | 50+ Clients                     |
+| --------------- | ---------------------- | ------------------ | ------------------------------- |
+| DB Connections  | Direct pool per tenant | PgBouncer required | PgBouncer + read replicas       |
+| Caching         | Optional               | Redis required     | Redis Cluster                   |
+| Background Jobs | Inline                 | BullMQ + 1 worker  | BullMQ + dedicated worker fleet |
+| App Servers     | 1 instance             | 2 instances (HA)   | Auto-scaling group              |
+| Monitoring      | Logs only              | Logs + metrics     | Full APM (Datadog/Grafana)      |
 
 ---
 
-*Document Version: 2.0 — Strengthened for 50+ Client Scale*
-*Next Review: Before onboarding client #25*
-
+_Document Version: 2.0 — Strengthened for 50+ Client Scale_
+_Next Review: Before onboarding client #25_

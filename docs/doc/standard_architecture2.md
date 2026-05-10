@@ -26,11 +26,11 @@ POST /api/v2/auth/login
 
 ### Rules
 
-* Passwords must be hashed using bcrypt (cost factor 12+).
-* Compare passwords using secure hash compare only.
-* Maximum 10 failed attempts.
-* Lock account for configurable duration after threshold.
-* Log login success/failure events.
+- Passwords must be hashed using bcrypt (cost factor 12+).
+- Compare passwords using secure hash compare only.
+- Maximum 10 failed attempts.
+- Lock account for configurable duration after threshold.
+- Log login success/failure events.
 
 ---
 
@@ -38,13 +38,13 @@ POST /api/v2/auth/login
 
 ### Access Token
 
-* Expiry: 15 minutes
+- Expiry: 15 minutes
 
 ### Refresh Token
 
-* Expiry: 7 days
-* Stored hashed in database
-* Revocable per device/session
+- Expiry: 7 days
+- Stored hashed in database
+- Revocable per device/session
 
 ### Environment Variables
 
@@ -63,10 +63,10 @@ Validate token on every protected request.
 
 ### Failure Responses
 
-* Missing token → 401
-* Invalid token → 401
-* Expired token → 401 with refresh hint
-* Disabled user → 403
+- Missing token → 401
+- Invalid token → 401
+- Expired token → 401 with refresh hint
+- Disabled user → 403
 
 ---
 
@@ -75,7 +75,7 @@ Validate token on every protected request.
 Use centralized fetch wrapper:
 
 ```ts
-tenantFetch(url, options)
+tenantFetch(url, options);
 ```
 
 Automatically inject:
@@ -115,12 +115,12 @@ POST /api/v2/auth/logout
 Create standard errors:
 
 ```ts
-AppError
-ValidationError
-NotFoundError
-ForbiddenError
-ConflictError
-UnauthorizedError
+AppError;
+ValidationError;
+NotFoundError;
+ForbiddenError;
+ConflictError;
+UnauthorizedError;
 ```
 
 ---
@@ -130,7 +130,7 @@ UnauthorizedError
 Single Express handler:
 
 ```ts
-app.use(globalErrorHandler)
+app.use(globalErrorHandler);
 ```
 
 Response:
@@ -189,11 +189,11 @@ Never expose stack traces in production.
 
 ## DB-1: Database Rules
 
-* Prefer normalized schema
-* Avoid JSON/JSONB for relational data
-* Use UUID public identifiers
-* Use integer PK internally if needed
-* Use soft delete only when required
+- Prefer normalized schema
+- Avoid JSON/JSONB for relational data
+- Use UUID public identifiers
+- Use integer PK internally if needed
+- Use soft delete only when required
 
 ---
 
@@ -209,11 +209,11 @@ child.parentUuid references parent.uuid
 
 Use indexes for:
 
-* foreign keys
-* search columns
-* status columns
-* created_at sorting
-* composite filters
+- foreign keys
+- search columns
+- status columns
+- created_at sorting
+- composite filters
 
 Review slow queries regularly.
 
@@ -264,13 +264,13 @@ Log:
 
 Track critical actions:
 
-* login
-* create
-* update
-* delete
-* approval
-* export
-* permission changes
+- login
+- create
+- update
+- delete
+- approval
+- export
+- permission changes
 
 Store:
 
@@ -297,10 +297,10 @@ GET /health
 
 Checks:
 
-* API alive
-* DB connectivity
-* Redis connectivity
-* Queue health
+- API alive
+- DB connectivity
+- Redis connectivity
+- Queue health
 
 ### Response
 
@@ -362,17 +362,17 @@ Validate env on startup using schema validation.
 Example:
 
 ```ts
-PORT
-DATABASE_URL
-JWT_SECRET
-REDIS_URL
-NODE_ENV
+PORT;
+DATABASE_URL;
+JWT_SECRET;
+REDIS_URL;
+NODE_ENV;
 ```
 
 If invalid:
 
 ```ts
-process.exit(1)
+process.exit(1);
 ```
 
 ---
@@ -383,10 +383,10 @@ Use Helmet / secure defaults.
 
 Enable:
 
-* HSTS
-* XSS protection
-* No sniff
-* Frame deny
+- HSTS
+- XSS protection
+- No sniff
+- Frame deny
 
 ---
 
@@ -394,9 +394,9 @@ Enable:
 
 Protect:
 
-* login
-* password reset
-* public APIs
+- login
+- password reset
+- public APIs
 
 Example:
 
@@ -410,12 +410,12 @@ Example:
 
 Track:
 
-* response time
-* error rate
-* queue failures
-* DB latency
-* memory
-* CPU
+- response time
+- error rate
+- queue failures
+- DB latency
+- memory
+- CPU
 
 Use dashboards + alerts.
 
@@ -425,10 +425,10 @@ Use dashboards + alerts.
 
 Minimum:
 
-* Unit tests for services
-* API integration tests
-* Auth tests
-* Permission tests
+- Unit tests for services
+- API integration tests
+- Auth tests
+- Permission tests
 
 ---
 
