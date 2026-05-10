@@ -1,0 +1,83 @@
+You are a senior software architect. Analyse the project I share below and provide a detailed production-readiness report.
+
+---
+
+STEP 1 — UNDERSTAND THE PROJECT
+• Identify the tech stack, framework, language(s), and runtime environment.
+• Map the top-level folder structure and explain the purpose of each directory.
+• Identify the entry point(s) of the application.
+
+STEP 2 — STRUCTURE ANALYSIS
+• Is the folder structure clean, logical, and scalable?
+• Are concerns properly separated (e.g. routes, controllers, services, models, utils)?
+• Are there any misplaced files or mixed responsibilities?
+• Rate structure: Good / Needs improvement / Critical issue.
+
+STEP 3 — DEPENDENCY AUDIT
+• List all direct dependencies and flag any that are:
+  - Outdated (major version behind)
+  - Deprecated or unmaintained
+  - Potentially insecure (known CVEs)
+• Flag unnecessary or duplicate packages.
+
+STEP 4 — ENVIRONMENT & CONFIGURATION
+• Are secrets/API keys hardcoded anywhere? (Flag as CRITICAL if yes.)
+• Is there a proper .env / secrets management strategy?
+• Are environment-specific configs separated (dev / staging / prod)?
+
+STEP 5 — ERROR HANDLING & LOGGING
+• Is there a global error handler?
+• Are errors logged with enough context (request ID, user ID, stack trace)?
+• Are unhandled promise rejections and uncaught exceptions covered?
+• Is a logging library used (e.g. Winston, Pino, Sentry)?
+
+STEP 6 — SECURITY AUDIT
+• Check for: SQL/NoSQL injection risks, XSS, CSRF, insecure headers.
+• Is authentication/authorisation implemented correctly?
+• Are sensitive routes protected by middleware?
+• Is input validated and sanitised?
+• Are CORS settings correctly configured?
+
+STEP 7 — TESTING COVERAGE
+• Are unit tests, integration tests, and e2e tests present?
+• What is the approximate coverage? Is it sufficient?
+• Are edge cases and failure paths tested?
+
+STEP 8 — CI/CD & DEPLOYMENT READINESS
+• Is there a CI/CD pipeline configured (GitHub Actions, Jenkins, etc.)?
+• Are build, lint, and test steps automated?
+• Is there a Dockerfile or container strategy?
+• Is there a health-check endpoint?
+
+STEP 9 — PERFORMANCE & SCALABILITY
+• Are there obvious N+1 query problems or unnecessary loops?
+• Is caching used where appropriate?
+• Are database queries optimised (indexes, pagination)?
+• Can the service scale horizontally?
+
+STEP 10 — CODE QUALITY
+• Is linting configured (ESLint, Pylint, etc.)?
+• Is a formatter enforced (Prettier, Black)?
+• Is TypeScript / type safety used?
+• Are there large functions that need to be broken down?
+
+STEP 11 — DOCUMENTATION
+• Is there a README with setup, environment, and run instructions?
+• Are APIs documented (Swagger, Postman, JSDoc)?
+• Are complex functions commented?
+
+---
+
+OUTPUT FORMAT:
+For each section above, give:
+1. Summary finding (1–2 sentences)
+2. Specific issues found (as a list, with file paths where possible)
+3. Recommended fix (with code snippets if helpful)
+4. Priority: 🔴 Critical | 🟠 High | 🟡 Medium | 🟢 Low
+
+End with:
+- Overall production-readiness score: X / 10
+- Top 5 changes required before going live
+- A suggested order of work
+
+⚠️ Important: Do NOT make any changes to the codebase. Only analyse and suggest. Wait for explicit permission before modifying anything.
