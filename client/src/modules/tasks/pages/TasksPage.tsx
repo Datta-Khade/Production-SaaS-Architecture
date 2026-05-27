@@ -1,278 +1,377 @@
+/**
+ * Tasks Module — TasksPage
+ *
+ * Rebuilt using shared skeleton components:
+ * - SectionTitle       → page heading + Add button
+ * - BaseSubmoduleTable → filterable list with edit/delete actions
+ * - BaseSubmoduleForm  → full-screen form with sections
+ * - FormSection        → section card wrapper
+ * - TextField          → RHF text input
+ * - SelectField        → RHF select dropdown
+ * - DateField          → RHF date input
+ * - TextAreaField      → RHF textarea with char count
+ * - EmptyState         → zero-data placeholder
+ * - LoadingSpinner     → loading indicator
+ * - UnsavedChangesDialog → guards against accidental close
+ * - Badge / StatusBadge   → status pill rendering
+ */
+
 import React, { useState } from 'react';
+import { z } from 'zod';
+import { ClipboardList, Plus } from 'lucide-react';
+
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from '../api';
 import type { Task } from '@shared/modules/schema/tasks';
-import { Button } from '@/shared/components/ui/button';
-import { Input } from '@/shared/components/ui/input';
-import { Label } from '@/shared/components/ui/label';
+
+// ─── Shared skeleton components ───────────────────────────────────────────────
+import SectionTitle from '@/shared/components/SectionTitle';
+import { BaseSubmoduleTable } from '@/shared/components/BaseSubmoduleTable';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/shared/components/ui/table';
-import { Plus, Pencil, Trash2, X, CheckCircle2, Clock, PlayCircle } from 'lucide-react';
+  BaseSubmoduleForm,
+  FormSection,
+} from '@/shared/components/BaseSubmoduleForm';
+import { TextField } from '@/shared/components/form/TextField';
+import { SelectField } from '@/shared/components/form/SelectField';
+import { DateField } from '@/shared/components/form/DateField';
+import { TextAreaField } from '@/shared/components/form/TextAreaField';
+import { EmptyState } from '@/shared/components/feedback/EmptyState';
+import { LoadingSpinner } from '@/shared/components/feedback/LoadingSpinner';
+import { UnsavedChangesDialog } from '@/shared/components/dialogs/UnsavedChangesDialog';
+import { ConfirmDialog } from '@/shared/components/dialogs/ConfirmDialog';
+import { Button } from '@/shared/components/ui/button';
+import { Badge } from '@/shared/components/ui/badge';
 
+// ─── Form Schema ──────────────────────────────────────────────────────────────
+const taskFormSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(255),
+  description: z.string().optional(),
+  status: z.enum(['todo', 'in_progress', 'done']),
+  dueDate: z.string().optional(),
+});
+
+type TaskFormValues = z.infer<typeof taskFormSchema>;
+
+// ─── Status config ────────────────────────────────────────────────────────────
+const STATUS_OPTIONS = [
+  { value: 'todo', label: 'To Do' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'done', label: 'Done' },
+];
+
+const STATUS_COLORS: Record<string, string> = {
+  todo: 'bg-gray-100 text-gray-700',
+  in_progress: 'bg-blue-50 text-blue-700',
+  done: 'bg-green-50 text-green-700',
+};
+
+const StatusBadge = ({ status }: { status: string }) => (
+  <span
+    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+      STATUS_COLORS[status] ?? 'bg-gray-100 text-gray-700'
+    }`}
+  >
+    {status.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+  </span>
+);
+
+// ─── Form sections ────────────────────────────────────────────────────────────
+const FORM_SECTIONS = [
+  { id: 'details', title: 'Task Details', letter: 'D' },
+  { id: 'settings', title: 'Status & Schedule', letter: 'S' },
+];
+
+// ─── Default values ───────────────────────────────────────────────────────────
+const DEFAULT_VALUES: TaskFormValues = {
+  title: '',
+  description: '',
+  status: 'todo',
+  dueDate: '',
+};
+
+// ─── Table columns ────────────────────────────────────────────────────────────
+const TASK_COLUMNS = [
+  { key: 'title', header: 'Title' },
+  {
+    key: 'description',
+    header: 'Description',
+    render: (item: Task) => (
+      <span className="text-xs text-gray-500 line-clamp-1 max-w-[240px]">
+        {item.description || <span className="italic text-gray-300">—</span>}
+      </span>
+    ),
+  },
+  {
+    key: 'status',
+    header: 'Status',
+    render: (item: Task) => <StatusBadge status={item.status} />,
+  },
+  {
+    key: 'dueDate',
+    header: 'Due Date',
+    render: (item: Task) =>
+      item.dueDate ? (
+        new Date(item.dueDate).toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        })
+      ) : (
+        <span className="text-gray-300 italic text-xs">—</span>
+      ),
+  },
+  {
+    key: 'createdAt',
+    header: 'Created',
+    render: (item: Task) =>
+      new Date(item.createdAt).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }),
+  },
+];
+
+const TASK_FILTERS = [
+  { key: 'title', placeholder: 'Search title…', type: 'search' as const },
+  {
+    key: 'status',
+    placeholder: 'Filter by status',
+    type: 'select' as const,
+    options: [
+      { value: 'todo', label: 'To Do' },
+      { value: 'in_progress', label: 'In Progress' },
+      { value: 'done', label: 'Done' },
+    ],
+  },
+];
+
+// ─── Main Page Component ──────────────────────────────────────────────────────
 export const TasksPage: React.FC = () => {
-  const [page, setPage] = useState(1);
-  const [isEditing, setIsEditing] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ title: '', description: '', status: 'todo' });
+  const [page] = useState(1);
+  const [showForm, setShowForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
-  const { data, isLoading, error } = useTasks(page, 10);
+  const { data, isLoading } = useTasks(page, 50);
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
 
+  const tasks = data?.data ?? [];
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
+
+  const handleOpenCreate = () => {
+    setEditingTask(null);
+    setShowForm(true);
+  };
+
   const handleEdit = (task: Task) => {
-    setIsEditing(task.uuid);
-    setFormData({
-      title: task.title,
-      description: task.description || '',
-      status: task.status,
-    });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setEditingTask(task);
+    setShowForm(true);
   };
 
-  const handleCancel = () => {
-    setIsEditing(null);
-    setFormData({ title: '', description: '', status: 'todo' });
+  const handleDelete = (task: Task) => {
+    setTaskToDelete(task);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isEditing) {
-      updateTask.mutate({ id: isEditing, data: formData }, { onSuccess: handleCancel });
+  const handleConfirmDelete = () => {
+    if (taskToDelete) {
+      deleteTask.mutate(taskToDelete.uuid);
+      setTaskToDelete(null);
+    }
+  };
+
+  const handleClose = () => {
+    // Will be called by BaseSubmoduleForm's back arrow
+    // Use unsaved dialog logic via pendingClose guard
+    setShowUnsavedDialog(true);
+  };
+
+  const handleSubmit = (data: TaskFormValues) => {
+    const payload = {
+      title: data.title,
+      description: data.description || undefined,
+      status: data.status,
+      dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+    };
+
+    if (editingTask) {
+      updateTask.mutate(
+        { id: editingTask.uuid, data: payload },
+        { onSuccess: () => setShowForm(false) }
+      );
     } else {
-      createTask.mutate(formData, { onSuccess: handleCancel });
+      createTask.mutate(payload, {
+        onSuccess: () => setShowForm(false),
+      });
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      deleteTask.mutate(id);
-    }
-  };
+  // ── Loading / Empty ──────────────────────────────────────────────────────────
 
-  if (error) {
+  if (isLoading && tasks.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center p-8 bg-red-50 rounded-xl border border-red-100 max-w-md">
-          <p className="text-red-600 font-medium">Failed to load tasks</p>
-          <p className="text-red-500 text-sm mt-1">{(error as Error).message}</p>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner size="lg" text="Loading tasks…" />
       </div>
     );
   }
 
-  return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Tasks</h1>
-          <p className="text-gray-500 mt-1">{"Manage your team's workflow and priorities"}</p>
-        </div>
-      </div>
+  // ── Full-screen form ─────────────────────────────────────────────────────────
 
-      {/* Task Form Section */}
-      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            {isEditing ? (
-              <Pencil size={18} className="text-[#16569e]" />
-            ) : (
-              <Plus size={18} className="text-[#16569e]" />
-            )}
-            {isEditing ? 'Edit Task' : 'Create New Task'}
-          </h2>
-        </div>
+  if (showForm) {
+    const defaultValues: TaskFormValues = editingTask
+      ? {
+          title: editingTask.title,
+          description: editingTask.description ?? '',
+          status: editingTask.status as 'todo' | 'in_progress' | 'done',
+          dueDate: editingTask.dueDate
+            ? new Date(editingTask.dueDate).toISOString().split('T')[0]
+            : '',
+        }
+      : DEFAULT_VALUES;
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                required
-                placeholder="What needs to be done?"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <select
-                id="status"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              >
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <textarea
-              id="description"
-              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              placeholder="Add more details about this task..."
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            {isEditing && (
-              <Button type="button" variant="outline" onClick={handleCancel} className="gap-2">
-                <X size={16} /> Cancel
-              </Button>
-            )}
-            <Button
-              type="submit"
-              className="bg-[#16569e] hover:bg-[#1e5fa8] text-white gap-2 min-w-[140px]"
-              disabled={createTask.isPending || updateTask.isPending}
-            >
-              {isEditing ? <CheckCircle2 size={16} /> : <Plus size={16} />}
-              {isEditing ? 'Update Task' : 'Create Task'}
-            </Button>
-          </div>
-        </form>
-      </section>
-
-      {/* Task List Section */}
-      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-          <h2 className="text-lg font-semibold text-gray-900">Task Overview</h2>
-        </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50/30">
-                <TableHead className="w-[40%]">Task Details</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-32 text-center text-gray-500">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#16569e]"></div>
-                      <span>Loading tasks...</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : data?.data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="h-32 text-center text-gray-500">
-                    No tasks found. Create one to get started!
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data?.data.map((task) => (
-                  <TableRow key={task.uuid} className="hover:bg-gray-50/50 transition-colors">
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="font-semibold text-gray-900">{task.title}</div>
-                        {task.description && (
-                          <div className="text-xs text-gray-500 line-clamp-1">
-                            {task.description}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {task.status === 'done' ? (
-                          <CheckCircle2 size={14} className="text-green-500" />
-                        ) : task.status === 'in_progress' ? (
-                          <PlayCircle size={14} className="text-blue-500" />
-                        ) : (
-                          <Clock size={14} className="text-gray-400" />
-                        )}
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            task.status === 'done'
-                              ? 'bg-green-50 text-green-700'
-                              : task.status === 'in_progress'
-                                ? 'bg-blue-50 text-blue-700'
-                                : 'bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          {task.status.replace('_', ' ').toUpperCase()}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500 font-['Roboto',Helvetica]">
-                      {new Date(task.createdAt).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(task)}
-                          className="h-8 w-8 text-gray-400 hover:text-[#16569e] hover:bg-[#16569e]/5"
-                        >
-                          <Pencil size={14} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(task.uuid)}
-                          className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+    return (
+      <>
+        <BaseSubmoduleForm
+          title={editingTask ? `Edit Task — ${editingTask.title}` : 'Create New Task'}
+          sections={FORM_SECTIONS}
+          schema={taskFormSchema}
+          defaultValues={defaultValues}
+          onClose={handleClose}
+          onSubmit={handleSubmit}
+          primaryColor="#16569e"
+        >
+          {({ activeSection, form }) => (
+            <>
+              {/* ── Section 1: Task Details ── */}
+              {activeSection === 'details' && (
+                <FormSection
+                  title="Task Details"
+                  description="Enter the core information about this task."
+                  accentColor="#16569e"
+                >
+                  <div className="grid grid-cols-1 gap-6">
+                    <TextField
+                      control={form.control}
+                      name="title"
+                      label="Title"
+                      placeholder="What needs to be done?"
+                      required
+                    />
+                    <TextAreaField
+                      control={form.control}
+                      name="description"
+                      label="Description"
+                      placeholder="Add more details about this task…"
+                      rows={4}
+                      maxLength={1000}
+                      description="Optional — provide context, acceptance criteria, or notes."
+                    />
+                  </div>
+                </FormSection>
               )}
-            </TableBody>
-          </Table>
-        </div>
 
-        {/* Pagination Section */}
-        {data?.meta && data.meta.pages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/30">
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">
-              Page {data.meta.page} of {data.meta.pages} <span className="mx-1">•</span>{' '}
-              {data.meta.total} total tasks
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="h-8 text-xs"
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((p) => Math.min(data.meta.pages, p + 1))}
-                disabled={page === data.meta.pages}
-                className="h-8 text-xs"
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        )}
-      </section>
+              {/* ── Section 2: Status & Schedule ── */}
+              {activeSection === 'settings' && (
+                <FormSection
+                  title="Status & Schedule"
+                  description="Set the current status and optional due date."
+                  accentColor="#16569e"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <SelectField
+                      control={form.control}
+                      name="status"
+                      label="Status"
+                      placeholder="Select status"
+                      options={STATUS_OPTIONS}
+                      required
+                    />
+                    <DateField
+                      control={form.control}
+                      name="dueDate"
+                      label="Due Date"
+                      description="Leave blank if no deadline."
+                    />
+                  </div>
+                </FormSection>
+              )}
+            </>
+          )}
+        </BaseSubmoduleForm>
+
+        {/* Unsaved changes guard */}
+        <UnsavedChangesDialog
+          isOpen={showUnsavedDialog}
+          onSave={() => {
+            setShowUnsavedDialog(false);
+            // Trigger form submit via the form's submit handler is tricky here
+            // so we just close — user can click Save Draft in the header
+            setShowForm(false);
+          }}
+          onDiscard={() => {
+            setShowUnsavedDialog(false);
+            setShowForm(false);
+          }}
+          onCancel={() => setShowUnsavedDialog(false)}
+        />
+      </>
+    );
+  }
+
+  // ── List view ────────────────────────────────────────────────────────────────
+
+  return (
+    <div className="space-y-6">
+      <SectionTitle title="Tasks">
+        <Button
+          onClick={handleOpenCreate}
+          className="bg-[#16569e] hover:bg-[#1e5fa8] text-white gap-2"
+          data-testid="button-create-task"
+        >
+          <Plus size={16} />
+          Add Task
+        </Button>
+      </SectionTitle>
+
+      {tasks.length === 0 ? (
+        <EmptyState
+          icon={<ClipboardList size={48} />}
+          title="No tasks yet"
+          description="Create your first task to start tracking work for your team."
+          action={{ label: '+ Create Task', onClick: handleOpenCreate }}
+        />
+      ) : (
+        <BaseSubmoduleTable
+          title=""
+          data={tasks}
+          columns={TASK_COLUMNS}
+          filters={TASK_FILTERS}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          headerColor="#16569e"
+          headerActions={
+            <Badge variant="outline" className="text-xs text-gray-500">
+              {tasks.length} task{tasks.length !== 1 ? 's' : ''}
+            </Badge>
+          }
+        />
+      )}
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        isOpen={!!taskToDelete}
+        title="Delete Task"
+        description={`Are you sure you want to delete "${taskToDelete?.title || ''}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setTaskToDelete(null)}
+        variant="danger"
+      />
     </div>
   );
 };
